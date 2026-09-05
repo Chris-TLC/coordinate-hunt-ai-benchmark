@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070b0d" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23070b0d' d='M0 0h64v64H0z'/%3E%3Cpath fill='none' stroke='%23a8e8dc' stroke-width='3' d='M32 8 56 32 32 56 8 32Z'/%3E%3Cpath fill='none' stroke='%23ffab74' stroke-width='2' d='m32 18 14 14-14 14-14-14Z'/%3E%3C/svg%3E" />
+    <title>视差协议</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main id="app">
+      <canvas id="game-canvas" aria-label="视差协议游戏画面"></canvas>
+
+      <section id="intro" class="overlay intro" aria-labelledby="game-title">
+        <div class="intro__content">
+          <div class="brand-mark" aria-hidden="true"><span></span><span></span></div>
+          <h1 id="game-title">视差协议</h1>
+          <p class="intro__promise">看不见对手。只能猜中他所在的坐标。</p>
+          <div class="rule-line">
+            <span>读巨幕上的痕迹</span>
+            <i></i>
+            <span>瞄准地图位置</span>
+            <i></i>
+            <span>三次命中终结对手</span>
+          </div>
+          <button id="start-button" class="primary-button" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5 18 12 8 18.5Z"/></svg>
+            进入房间
+          </button>
+          <p class="controls-copy"><kbd>WASD</kbd> 移动　<kbd>Shift</kbd> 疾跑　<kbd>鼠标</kbd> 瞄准　<kbd>左键</kbd> 开火　<kbd>Q</kbd> 侦测</p>
+        </div>
+        <p class="intro__footer">16 × 15 米镜像空间 · 120 秒</p>
+      </section>
+
+      <section id="hud" class="hud is-hidden" aria-label="游戏状态">
+        <div class="hud__top">
+          <div class="vital vital--player">
+            <span class="vital__label">你</span>
+            <div class="vital__bar"><i id="player-health"></i></div>
+            <strong id="player-health-text">100</strong>
+          </div>
+          <div class="round-clock">
+            <span>剩余时间</span>
+            <strong id="timer">2:00</strong>
+          </div>
+          <div class="vital vital--enemy">
+            <strong id="enemy-health-text">100</strong>
+            <div class="vital__bar"><i id="enemy-health"></i></div>
+            <span class="vital__label">对手</span>
+          </div>
+        </div>
+
+        <div id="crosshair" class="crosshair" aria-hidden="true">
+          <i class="crosshair__top"></i><i class="crosshair__right"></i>
+          <i class="crosshair__bottom"></i><i class="crosshair__left"></i><b></b>
+          <span id="aim-label">寻找巨幕</span>
+        </div>
+
+        <div id="event-message" class="event-message" aria-live="polite"></div>
+        <div id="exposure" class="exposure"><i></i><span>你的坐标已暴露</span></div>
+        <div id="scan-warning" class="scan-warning">敌方侦测波经过</div>
+
+        <div class="hud__bottom-left">
+          <div id="movement-state" class="movement-state"><i></i><span>静止 · 无痕迹</span></div>
+          <p id="hint">面对巨幕，寻找对手留下的光迹</p>
+        </div>
+
+        <div class="weapon-status">
+          <div class="weapon-status__label"><span>映射器</span><strong id="weapon-state">就绪</strong></div>
+          <div id="ammo" class="ammo" aria-label="剩余弹药"></div>
+          <div class="scanner-status">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.4"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            <span>侦测器</span><strong id="scanner-count">2</strong><kbd>Q</kbd>
+          </div>
+        </div>
+      </section>
+
+      <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
+      <div id="near-miss" class="near-miss" aria-hidden="true"></div>
+      <div id="flash" class="flash" aria-hidden="true"></div>
+
+      <section id="pause" class="overlay pause is-hidden" aria-labelledby="pause-title">
+        <div class="pause__content">
+          <h2 id="pause-title">连接暂停</h2>
+          <p>点击继续，重新锁定视线。</p>
+          <button id="resume-button" class="primary-button" type="button">继续</button>
+          <button id="restart-button-pause" class="text-button" type="button">重新开始</button>
+        </div>
+      </section>
+
+      <section id="result" class="overlay result is-hidden" aria-labelledby="result-title">
+        <div class="result__content">
+          <p id="result-kicker">协议结束</p>
+          <h2 id="result-title">猎杀完成</h2>
+          <p id="result-detail">你比对手更早锁定了坐标。</p>
+          <dl class="stats">
+            <div><dt>命中</dt><dd id="stat-hits">0</dd></div>
+            <div><dt>开火</dt><dd id="stat-shots">0</dd></div>
+            <div><dt>命中率</dt><dd id="stat-accuracy">0%</dd></div>
+            <div><dt>剩余生命</dt><dd id="stat-health">0</dd></div>
+          </dl>
+          <button id="restart-button" class="primary-button" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8V3l-2 2A8 8 0 1 0 20 12h-2a6 6 0 1 1-2.4-4.8L13 10h6Z"/></svg>
+            再来一局
+          </button>
+        </div>
+      </section>
+
+      <div id="boot-error" class="boot-error is-hidden"></div>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
