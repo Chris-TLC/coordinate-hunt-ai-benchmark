@@ -1,0 +1,2557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>对影 MIRRORROOM · 隔墙对局</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2307101d'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%238fd8ff' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='4' fill='%238fd8ff'/%3E%3Cpath d='M32 8v10M32 46v10M8 32h10M46 32h10' stroke='%238fd8ff' stroke-width='3'/%3E%3C/svg%3E">
+</head>
+<body>
+<div id="stage"><canvas id="game"></canvas></div>
+<div id="ui"></div>
+<script>
+/* ===== 00-const.js ===== */
+'use strict';
+/* ================= 《对影 MIRRORROOM》 常量与调参 ================= */
+
+const C = {
+  /* 房间 */
+  ROOM_W: 16, ROOM_D: 15,            // 16m 宽 × 15m 深
+  WALL_H: 4.2,                        // 普通墙高
+  SCREEN_H: 6.4, SCREEN_Y0: 0.4,     // 巨幕高 / 幕底离地
+  EYE: 1.7,                           // 视点高度
+  FOV: 78 * Math.PI / 180,
+  PLAYER_R: 0.32,                     // 碰撞半径
+
+  /* 移动 */
+  WALK: 2.35, RUN: 3.95,
+  ADRENALINE_MULT: 1.3, ADRENALINE_T: 1.4,
+
+  /* 回合 */
+  ROUND_T: 120, COUNTDOWN: 3.6,
+  MAX_HP: 100,
+
+  /* 武器 */
+  GUN_CD: 0.85, GUN_DMG: 34, GUN_RADIUS: 1.15, NEAR_MISS: 2.4,
+  SCAN_CD: 9, SCAN_DELAY: 0.65, SCAN_R: 3.2, SCAN_REVEAL: 1.5,
+
+  /* 打击感 */
+  HITSTOP: 0.13, KILL_TS: 0.3, KILL_SLOW_T: 1.05,
+
+  /* 痕迹系统 */
+  TRAIL_RUN:  { every: [0.45, 0.8],  life: 2.4, noise: 0.5,  alpha: 0.5 },
+  TRAIL_WALK: { every: [3.0, 5.2],   life: 1.9, noise: 0.95, alpha: 0.34 },
+  RIPPLE:     { idle: 4.5, every: 2.6, life: 1.15, noise: 1.3, alpha: 0.15 },
+
+  /* 终局全域扫描 */
+  ENDGAME: { at: 25, every: 6, reveal: 1.6, sweep: 0.9 },
+
+  /* 特效寿命 */
+  FLASH_LIFE: 2.7, BEAM_LIFE: 0.3, INCOMING_LIFE: 0.55, PULSE_LIFE: 1.1,
+
+  /* 巨幕位图(蓝图) */
+  MAP_W: 960, MAP_H: 384,
+};
+
+/* 障碍物:网格坐标(1 格 = 1 米;gx∈[0,15] 对应 x∈[-8,8],gz∈[0,14] 对应 z∈[0,15]) */
+const MAPDEF = {
+  obstacles: [
+    { gx: 4,  gz: 4,  w: 1, h: 1 },   // 左前柱
+    { gx: 11, gz: 4,  w: 1, h: 1 },   // 右前柱
+    { gx: 6,  gz: 7,  w: 2, h: 1 },   // 中央货箱
+    { gx: 12, gz: 9,  w: 1, h: 1 },   // 右侧柱
+    { gx: 2,  gz: 10, w: 2, h: 1 },   // 左后箱
+    { gx: 9,  gz: 12, w: 1, h: 1 },   // 后右柱
+  ],
+  spawn: { x: 0, z: 13.5 },
+};
+
+/* AI 难度预设 */
+const DIFF = {
+  easy: {
+    name: '简单', noise: 1.9, react: 0.9, cadence: [2.4, 4.2],
+    confThresh: 34, scanEvery: 13, camp: 0.2, follow: 1.0, walkBias: 0.5,
+  },
+  normal: {
+    name: '标准', noise: 1.25, react: 0.5, cadence: [1.7, 3.0],
+    confThresh: 24, scanEvery: 10, camp: 0.16, follow: 1.6, walkBias: 0.32,
+  },
+  hard: {
+    name: '困难', noise: 0.85, react: 0.28, cadence: [1.3, 2.4],
+    confThresh: 16, scanEvery: 8, camp: 0.08, follow: 2.2, walkBias: 0.2,
+  },
+};
+
+/* ===== 10-util.js ===== */
+'use strict';
+/* ================= 工具函数 ================= */
+
+const TAU = Math.PI * 2;
+
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smooth(t) { return t * t * (3 - 2 * t); }
+function frac(v) { v = v - Math.floor(v); return v < 0 ? v + 1 : v; }
+function dist2d(ax, az, bx, bz) { return Math.hypot(ax - bx, az - bz); }
+
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6D2B79F5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* 全局游戏随机源(每局可重置,保证可复现) */
+let RNG = mulberry32((Date.now() % 1e9) | 0);
+function seedRng(s) { RNG = mulberry32(s | 0); }
+function rnd(a, b) { return a + RNG() * (b - a); }
+function rndInt(a, b) { return Math.floor(rnd(a, b + 1)); }
+function pick(arr) { return arr[Math.floor(RNG() * arr.length) % arr.length]; }
+
+/* 标准正态 */
+function gauss() {
+  let u = 0, v = 0;
+  while (u === 0) u = RNG();
+  while (v === 0) v = RNG();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(TAU * v);
+}
+
+function fmtTime(s) {
+  s = Math.max(0, Math.ceil(s));
+  const m = (s / 60) | 0;
+  return m + ':' + String(s % 60).padStart(2, '0');
+}
+
+function hash2(x, y) {
+  let h = ((x * 374761393) ^ (y * 668265263)) | 0;
+  h = (h ^ (h >>> 13)) | 0;
+  h = Math.imul(h, 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+function drawText(ctx, text, x, y, size, color, align, alpha, font) {
+  ctx.save();
+  ctx.globalAlpha = alpha === undefined ? 1 : alpha;
+  ctx.fillStyle = color;
+  ctx.font = size + 'px ' + (font || '"SF Mono",Menlo,Consolas,monospace');
+  ctx.textAlign = align || 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+/* 世界坐标 → 巨幕位图像素 */
+function mapPX(x) { return (x + 8) / 16 * C.MAP_W; }
+function mapPY(z) { return z / 15 * C.MAP_H; }
+
+/* 圆形径向渐变缓存辅助 */
+function radialGlow(ctx, x, y, r, inner, outer) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, inner);
+  g.addColorStop(1, outer);
+  return g;
+}
+
+/* ===== 20-audio.js ===== */
+'use strict';
+/* ================= 音频:WebAudio 全合成(零素材) ================= */
+
+const AudioSys = {
+  ctx: null, master: null, comp: null, noiseBuf: null,
+  volume: 0.9, muted: false, started: false,
+  humGain: null, humFilter: null, facing: 0,
+
+  init() {
+    if (this.ctx) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+      this.comp = this.ctx.createDynamicsCompressor();
+      this.comp.threshold.value = -18;
+      this.comp.ratio.value = 6;
+      this.comp.connect(this.ctx.destination);
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.muted ? 0 : this.volume;
+      this.master.connect(this.comp);
+
+      const len = this.ctx.sampleRate * 1.5;
+      this.noiseBuf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const d = this.noiseBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+
+      this.startAmbient();
+      this.started = true;
+    } catch (e) { /* 无音频环境则静默 */ }
+  },
+
+  setVolume(v) { this.volume = v; if (this.master) this.master.gain.value = this.muted ? 0 : v; },
+  toggleMute() { this.muted = !this.muted; if (this.master) this.master.gain.value = this.muted ? 0 : this.volume; return this.muted; },
+
+  /* ---------- 基础合成原语 ---------- */
+  now() { return this.ctx ? this.ctx.currentTime : 0; },
+
+  out(pan) {
+    if (pan !== undefined && Math.abs(pan) > 0.01) {
+      const p = this.ctx.createStereoPanner();
+      p.pan.value = clamp(pan, -1, 1);
+      p.connect(this.master);
+      return p;
+    }
+    return this.master;
+  },
+
+  tone(type, f0, f1, dur, vol, pan, when) {
+    if (!this.ctx) return;
+    const t = (when === undefined ? this.now() : when);
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(Math.max(1, f0), t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.out(pan));
+    o.start(t); o.stop(t + dur + 0.05);
+  },
+
+  noise(f0, f1, dur, vol, q, pan, when, type) {
+    if (!this.ctx) return;
+    const t = (when === undefined ? this.now() : when);
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuf;
+    src.loop = true;
+    const f = this.ctx.createBiquadFilter();
+    f.type = type || 'bandpass';
+    f.frequency.setValueAtTime(Math.max(40, f0), t);
+    if (f1 !== f0) f.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t + dur);
+    f.Q.value = q || 1;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.out(pan));
+    src.start(t); src.stop(t + dur + 0.05);
+  },
+
+  thump(dur, vol, pan, when) {
+    this.tone('sine', 95, 42, dur, vol, pan, when);
+    this.noise(140, 90, dur * 1.15, vol * 0.5, 0.8, pan, when, 'lowpass');
+  },
+
+  /* ---------- 氛围 ---------- */
+  startAmbient() {
+    if (!this.ctx || this.humGain) return;
+    // 房间底噪
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noiseBuf; src.loop = true;
+    const lp = this.ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 130; lp.Q.value = 0.4;
+    const g = this.ctx.createGain(); g.gain.value = 0.05;
+    src.connect(lp); lp.connect(g); g.connect(this.master);
+    src.start();
+    // 低频轰
+    const o = this.ctx.createOscillator();
+    o.type = 'sine'; o.frequency.value = 52;
+    const og = this.ctx.createGain(); og.gain.value = 0.028;
+    o.connect(og); og.connect(this.master); o.start();
+    // 巨幕电流嗡(音量随朝向变化)
+    const h = this.ctx.createOscillator(); h.type = 'sawtooth'; h.frequency.value = 120;
+    const h2 = this.ctx.createOscillator(); h2.type = 'sine'; h2.frequency.value = 240;
+    this.humFilter = this.ctx.createBiquadFilter();
+    this.humFilter.type = 'lowpass'; this.humFilter.frequency.value = 300; this.humFilter.Q.value = 2;
+    this.humGain = this.ctx.createGain(); this.humGain.gain.value = 0;
+    const hg2 = this.ctx.createGain(); hg2.gain.value = 0.35;
+    h.connect(this.humFilter); h2.connect(hg2); hg2.connect(this.humFilter);
+    this.humFilter.connect(this.humGain); this.humGain.connect(this.master);
+    h.start(); h2.start();
+  },
+
+  /* 每帧更新:面向巨幕时嗡声变大 */
+  setScreenFacing(f) {
+    this.facing = f;
+    if (this.humGain && this.ctx) {
+      const target = 0.008 + Math.max(0, f) * 0.028;
+      this.humGain.gain.setTargetAtTime(target, this.now(), 0.15);
+    }
+  },
+
+  /* ---------- 界面 ---------- */
+  click() { this.noise(1600, 2400, 0.06, 0.25, 1.5); this.tone('sine', 900, 700, 0.05, 0.1); },
+  hover() { this.noise(2000, 2600, 0.04, 0.08, 3); },
+  countBeep(i) { this.tone('sine', 520, 520, 0.14, 0.3); if (i === 0) this.tone('sine', 760, 760, 0.3, 0.34); },
+  goSting() { this.tone('sawtooth', 220, 440, 0.35, 0.16); this.noise(400, 3000, 0.3, 0.12, 1.2); },
+  tick() { this.tone('sine', 880, 880, 0.05, 0.12); },
+
+  /* ---------- 脚步 ---------- */
+  ownStep(run) {
+    if (run) this.thump(0.14, 0.5);
+    else this.thump(0.16, 0.3);
+  },
+  /* 透过巨幕传来的敌方脚步:pan=左右, loud=0..1, muffle=是否被遮挡 */
+  enemyStep(run, loud, muffle, pan) {
+    const vol = 0.14 * (0.25 + loud * 0.75);
+    this.thump(run ? 0.13 : 0.16, vol * (muffle ? 0.45 : 1), pan);
+    this.noise(muffle ? 260 : 520, muffle ? 180 : 380, 0.1, vol * 0.5, 1.4, pan, undefined, 'bandpass');
+  },
+
+  /* ---------- 枪械 ---------- */
+  gunshot() {
+    this.noise(3000, 220, 0.16, 0.5, 0.9);
+    this.tone('sine', 170, 55, 0.14, 0.55);
+    this.tone('sawtooth', 640, 180, 0.09, 0.14);
+    this.noise(6000, 4000, 0.35, 0.1, 1, undefined, this.now() + 0.05, 'bandpass'); // 余响
+  },
+  impactDistant(hit) {
+    if (hit) { this.noise(900, 300, 0.14, 0.4, 1.2); this.tone('sine', 220, 90, 0.16, 0.4); this.tone('triangle', 1200, 700, 0.09, 0.16); }
+    else { this.noise(1400, 500, 0.12, 0.3, 1.4); this.tone('sine', 160, 70, 0.14, 0.3); }
+  },
+  /* 命中敌人(命中确认) */
+  hitConfirm() {
+    this.tone('sine', 660, 660, 0.09, 0.4);
+    this.tone('sine', 990, 990, 0.14, 0.32, undefined, this.now() + 0.08);
+    this.noise(2000, 900, 0.12, 0.3, 1.6);
+    this.thump(0.2, 0.5);
+  },
+  /* 自己被击中 */
+  hitTaken() {
+    this.thump(0.3, 0.85);
+    this.noise(500, 120, 0.3, 0.6, 0.7);
+    this.tone('sawtooth', 200, 60, 0.25, 0.3);
+  },
+  nearMiss(pan) {
+    this.noise(2600, 420, 0.22, 0.34, 2.5, pan, undefined, 'bandpass');
+  },
+  /* 敌方射击落入我的房间(空间化) */
+  incomingShot(dist, pan, hit) {
+    const k = clamp(1.1 - dist / 16, 0.25, 1);
+    if (hit) this.hitTaken();
+    else {
+      this.noise(1800, 300, 0.18, 0.4 * k, 1.2, pan);
+      this.tone('sine', 150, 60, 0.18, 0.3 * k, pan);
+    }
+  },
+
+  /* ---------- 侦测 ---------- */
+  scanCharge() { this.tone('sine', 300, 950, C.SCAN_DELAY, 0.14); },
+  scanPing() {
+    this.tone('sine', 1150, 1150, 0.5, 0.3);
+    this.noise(1500, 800, 0.4, 0.14, 2, undefined, undefined, 'bandpass');
+  },
+  scanFound() {
+    this.tone('sine', 880, 880, 0.1, 0.34);
+    this.tone('sine', 1175, 1175, 0.16, 0.34, undefined, this.now() + 0.11);
+    this.tone('sine', 1568, 1568, 0.2, 0.26, undefined, this.now() + 0.24);
+  },
+  scanEmpty() { this.tone('sine', 300, 210, 0.18, 0.26); },
+  /* 敌方侦测脉冲落在我房间(空间化) */
+  scanIncoming(dist, pan, hitMe) {
+    const k = clamp(1.1 - dist / 16, 0.2, 1);
+    this.tone('sine', 900, 1400, 0.5, 0.24 * k, pan);
+    if (hitMe) { this.tone('sine', 1400, 900, 0.5, 0.3 * k, pan); this.noise(1200, 600, 0.5, 0.2 * k, 2, pan); }
+  },
+  /* 地图上出现新痕迹的轻提示 */
+  traceTick(pan) { this.tone('sine', 1900, 1500, 0.06, 0.05, pan); },
+
+  /* ---------- 情绪 ---------- */
+  heartbeat(strength) {
+    this.thump(0.12, 0.28 * strength, undefined, this.now());
+    this.thump(0.1, 0.18 * strength, undefined, this.now() + 0.18);
+  },
+  globalSweep() {
+    this.noise(300, 2400, 0.9, 0.22, 1.2, undefined, undefined, 'bandpass');
+    this.tone('sawtooth', 180, 720, 0.9, 0.1);
+    this.tone('sine', 520, 1040, 0.8, 0.18);
+  },
+  win() {
+    [392, 523, 659, 784].forEach((f, i) => this.tone('triangle', f, f, 0.5, 0.22, undefined, this.now() + i * 0.13));
+    this.noise(800, 3000, 1.4, 0.06, 0.8, undefined, this.now(), 'bandpass');
+  },
+  lose() {
+    [233, 196, 147].forEach((f, i) => this.tone('sawtooth', f, f * 0.97, 0.8, 0.16, undefined, this.now() + i * 0.28));
+  },
+  draw() { this.tone('sine', 330, 330, 0.5, 0.2); this.tone('sine', 262, 262, 0.7, 0.2, undefined, this.now() + 0.25); },
+};
+
+/* ===== 30-map.js ===== */
+'use strict';
+/* ================= 地图:网格、碰撞、声影 ================= */
+
+const MapGrid = {
+  gw: 16, gh: 15,
+  wall: new Uint8Array(16 * 15),
+  obs: [],
+
+  init() {
+    this.wall.fill(0);
+    this.obs = MAPDEF.obstacles.map(o => ({
+      gx: o.gx, gz: o.gz, w: o.w, h: o.h,
+      x0: o.gx - 8, x1: o.gx + o.w - 8, z0: o.gz, z1: o.gz + o.h,
+    }));
+    for (const o of MAPDEF.obstacles)
+      for (let gx = o.gx; gx < o.gx + o.w; gx++)
+        for (let gz = o.gz; gz < o.gz + o.h; gz++)
+          this.wall[gz * 16 + gx] = 1;
+  },
+
+  isObs(gx, gz) {
+    if (gx < 0 || gx >= 16 || gz < 0 || gz >= 15) return false;
+    return this.wall[gz * 16 + gx] === 1;
+  },
+
+  /* 圆 vs 障碍物 + 边界,返回修正后的位置(滑动) */
+  collide(x, z, r) {
+    let px = x, pz = z;
+    for (const o of this.obs) {
+      const nx = clamp(px, o.x0 - r, o.x1 + r);
+      const nz = clamp(pz, o.z0 - r, o.z1 + r);
+      if (nx === px && nz === pz) continue;
+      const dx = px - nx, dz = pz - nz;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < r * r) {
+        const d = Math.sqrt(d2) || 0.0001;
+        const push = r - d;
+        px = nx + (dx / d) * push;
+        pz = nz + (dz / d) * push;
+      }
+    }
+    px = clamp(px, -8 + r, 8 - r);
+    pz = clamp(pz, r, 15 - r);
+    return { x: px, z: pz };
+  },
+
+  /* 是否处于障碍物的"声影"(障碍物位于它与巨幕之间 → 脚步声更轻) */
+  muffled(x, z) {
+    for (const o of this.obs)
+      if (x > o.x0 - 0.05 && x < o.x1 + 0.05 && z > o.z1) return true;
+    return false;
+  },
+
+  /* 该点是否在障碍物内 */
+  insideObs(x, z) {
+    for (const o of this.obs)
+      if (x > o.x0 && x < o.x1 && z > o.z0 && z < o.z1) return true;
+    return false;
+  },
+
+  /* 随机取一个可站立点 */
+  randomFree(margin, rngFn) {
+    const R = rngFn || RNG;
+    for (let i = 0; i < 16; i++) {
+      const x = -8 + margin + R() * (16 - margin * 2);
+      const z = margin + R() * (15 - margin * 2);
+      if (!this.insideObs(x, z)) return { x, z };
+    }
+    return { x: 0, z: 13.5 };
+  },
+};
+
+MapGrid.init();
+
+/* ===== 40-render.js ===== */
+'use strict';
+/* ================= 渲染:射线投射 3D + 蓝图巨幕 ================= */
+
+class Renderer {
+  constructor(canvas) {
+    this.cv = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.mapCv = document.createElement('canvas');
+    this.mapCv.width = C.MAP_W;
+    this.mapCv.height = C.MAP_H;
+    this.map = this.mapCv.getContext('2d');
+    this.W = 0; this.H = 0;
+    this.scale = 1;
+    this.frameT = 16.6;
+    this.dust = [];
+    for (let i = 0; i < 55; i++)
+      this.dust.push({ x: rnd(-7.5, 7.5), z: rnd(0.5, 14.5), y: rnd(0.6, 3.6), ph: rnd(0, TAU), sp: rnd(0.2, 0.7) });
+    this.scanPat = null;
+    this.vig = null;
+    this.time = 0;
+  }
+
+  resize(cssW, cssH, dpr) {
+    const s = clamp(dpr, 1, 1.75) * this.scale;
+    this.W = Math.max(320, Math.floor(cssW * s));
+    this.H = Math.max(240, Math.floor(cssH * s));
+    this.cv.width = this.W;
+    this.cv.height = this.H;
+    this.vig = null;
+    this.scanPat = null;
+  }
+
+  patScanlines() {
+    if (this.scanPat) return this.scanPat;
+    const c = document.createElement('canvas');
+    c.width = 4; c.height = 4;
+    const g = c.getContext('2d');
+    g.fillStyle = 'rgba(0,0,0,0.55)';
+    g.fillRect(0, 0, 4, 2);
+    this.scanPat = this.ctx.createPattern(c, 'repeat');
+    return this.scanPat;
+  }
+
+  vignette() {
+    if (this.vig) return this.vig;
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 128;
+    const g = c.getContext('2d');
+    const rg = g.createRadialGradient(64, 64, 30, 64, 64, 90);
+    rg.addColorStop(0, 'rgba(0,0,0,0)');
+    rg.addColorStop(1, 'rgba(0,0,0,0.5)');
+    g.fillStyle = rg;
+    g.fillRect(0, 0, 128, 128);
+    this.vig = this.ctx.createPattern(c, 'no-repeat');
+    return this.vig;
+  }
+
+  /* ---------- 3D 点投影 ---------- */
+  project(st, x, y, z) {
+    const cam = st.cam;
+    const fwdX = Math.sin(cam.yaw), fwdZ = -Math.cos(cam.yaw);
+    const rX = Math.cos(cam.yaw), rZ = Math.sin(cam.yaw);
+    const relX = x - cam.x, relZ = z - cam.z;
+    const depth = relX * fwdX + relZ * fwdZ;
+    if (depth < 0.12) return null;
+    const f = (this.H * 0.5) / Math.tan(this.vfov() / 2);
+    const lat = relX * rX + relZ * rZ;
+    const sx = this.W / 2 + (lat / depth) * f;
+    const sy = this.H / 2 + ((cam.y - y) / depth) * f + Math.tan(cam.pitch) * f;
+    return { x: sx, y: sy, depth };
+  }
+
+  vfov() {
+    const hf = C.FOV;
+    return 2 * Math.atan(Math.tan(hf / 2) * (this.H / this.W));
+  }
+
+  /* ---------- 蓝图巨幕 ---------- */
+  drawMap(st) {
+    const g = this.map, W = C.MAP_W, H = C.MAP_H;
+    g.clearRect(0, 0, W, H);
+    /* 底色 */
+    let bg = g.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#0c1830');
+    bg.addColorStop(0.5, '#11254a');
+    bg.addColorStop(1, '#0b1730');
+    g.fillStyle = bg;
+    g.fillRect(0, 0, W, H);
+    /* 磷光辉光 */
+    const ph = g.createRadialGradient(W / 2, H / 2, H * 0.15, W / 2, H / 2, H * 1.1);
+    ph.addColorStop(0, 'rgba(120,205,255,0.13)');
+    ph.addColorStop(1, 'rgba(120,205,255,0)');
+    g.fillStyle = ph;
+    g.fillRect(0, 0, W, H);
+
+    /* 网格 */
+    g.lineWidth = 1;
+    g.strokeStyle = 'rgba(100,185,255,0.14)';
+    g.beginPath();
+    for (let x = 0; x <= 16; x++) {
+      const px = x / 16 * W;
+      g.moveTo(px, 0); g.lineTo(px, H);
+    }
+    for (let z = 0; z <= 15; z++) {
+      const py = z / 15 * H;
+      g.moveTo(0, py); g.lineTo(W, py);
+    }
+    g.stroke();
+    g.strokeStyle = 'rgba(110,200,255,0.26)';
+    g.beginPath();
+    for (let x = 0; x <= 16; x += 5) { const px = x / 16 * W; g.moveTo(px, 0); g.lineTo(px, H); }
+    for (let z = 0; z <= 15; z += 5) { const py = z / 15 * H; g.moveTo(0, py); g.lineTo(W, py); }
+    g.stroke();
+
+    /* 房间轮廓 */
+    g.strokeStyle = 'rgba(150,225,255,0.9)';
+    g.lineWidth = 2;
+    g.strokeRect(1, 1, W - 2, H - 2);
+    g.strokeStyle = 'rgba(110,195,255,0.35)';
+    g.lineWidth = 1;
+    g.strokeRect(5, 5, W - 10, H - 10);
+
+    /* 底部隔断墙(共享巨幕墙) */
+    g.fillStyle = 'rgba(160,235,255,0.22)';
+    g.fillRect(0, H - 6, W, 6);
+    g.strokeStyle = 'rgba(180,240,255,0.95)';
+    g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(0, H - 6.5); g.lineTo(W, H - 6.5); g.stroke();
+
+    /* 障碍物 */
+    MapGrid.obs.forEach((o, i) => {
+      const x0 = mapPX(o.x0), x1 = mapPX(o.x1), y0 = mapPY(o.z0), y1 = mapPY(o.z1);
+      g.fillStyle = 'rgba(80,160,240,0.24)';
+      g.fillRect(x0, y0, x1 - x0, y1 - y0);
+      g.strokeStyle = 'rgba(140,215,255,0.75)';
+      g.lineWidth = 1;
+      g.strokeRect(x0, y0, x1 - x0, y1 - y0);
+      g.save();
+      g.beginPath(); g.rect(x0, y0, x1 - x0, y1 - y0); g.clip();
+      g.strokeStyle = 'rgba(140,215,255,0.28)';
+      g.beginPath();
+      for (let d = -40; d < 60; d += 8) {
+        g.moveTo(x0 + d, y1); g.lineTo(x1 + d, y0);
+      }
+      g.stroke();
+      g.restore();
+      drawText(g, 'OBJ-' + (i + 1), (x0 + x1) / 2, (y0 + y1) / 2, 9, 'rgba(170,220,255,0.65)');
+    });
+
+    /* 尺寸标注 */
+    g.strokeStyle = 'rgba(140,205,255,0.55)';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(10, 8); g.lineTo(W - 10, 8);
+    g.moveTo(10, 5); g.lineTo(10, 11); g.moveTo(W - 10, 5); g.lineTo(W - 10, 11);
+    g.moveTo(W - 8, 10); g.lineTo(W - 8, H - 10);
+    g.moveTo(W - 11, 10); g.lineTo(W - 5, 10); g.moveTo(W - 11, H - 10); g.lineTo(W - 5, H - 10);
+    g.stroke();
+    drawText(g, '16.00 m', W / 2, 20, 11, 'rgba(170,220,255,0.7)');
+    g.save();
+    g.translate(W - 18, H / 2); g.rotate(-Math.PI / 2);
+    drawText(g, '15.00 m', 0, 0, 11, 'rgba(170,220,255,0.7)');
+    g.restore();
+
+    /* 标签 */
+    drawText(g, 'LIVE FEED · 敌区 ROOM-B', 10, H - 16, 11, 'rgba(150,235,255,0.9)', 'left');
+    drawText(g, 'S-07 观测场', W - 10, 18, 10, 'rgba(150,215,255,0.65)', 'right');
+    if (st && st.timeLeft !== undefined) {
+      const t = fmtTime(st.timeLeft);
+      const urgent = st.timeLeft <= 30;
+      drawText(g, 'T-' + t, W - 10, H - 16, 13, urgent ? 'rgba(255,110,100,0.95)' : 'rgba(120,220,255,0.85)', 'right');
+    }
+
+    /* 倒计时开机态 */
+    if (st && st.state === 'countdown') {
+      g.fillStyle = 'rgba(2,5,10,0.72)';
+      g.fillRect(0, 0, W, H);
+      const p = 1 - clamp(st.countT / C.COUNTDOWN, 0, 1);
+      g.strokeStyle = 'rgba(120,220,255,0.6)';
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(0, H * 0.55); g.lineTo(W * p, H * 0.55);
+      g.stroke();
+      drawText(g, 'LINKING ROOM-B', W / 2, H * 0.42, 15, 'rgba(120,220,255,0.9)');
+      drawText(g, '同步中…', W / 2, H * 0.62, 12, 'rgba(120,220,255,0.55)');
+    }
+
+    if (!st) return;
+
+    /* ---- 事件绘制 ---- */
+    g.save();
+    g.globalCompositeOperation = 'lighter';
+    for (const ev of st.mapEvents) {
+      const a = clamp(ev.t / ev.life, 0, 1);
+      const x = mapPX(ev.x), y = mapPY(ev.z);
+      switch (ev.kind) {
+        case 'trail': {
+          const dx = (ev.dx || 0) * 60, dz = (ev.dz || 0) * 25.6;
+          g.strokeStyle = 'rgba(150,225,255,' + (0.34 * a * (ev.alpha || 0.5)).toFixed(3) + ')';
+          g.lineWidth = 3.5;
+          g.lineCap = 'round';
+          g.beginPath();
+          g.moveTo(x - dx, y - dz);
+          g.lineTo(x + dx, y + dz);
+          g.stroke();
+          break;
+        }
+        case 'ripple': {
+          g.strokeStyle = 'rgba(150,220,255,' + (0.22 * a * (ev.alpha || 0.15)).toFixed(3) + ')';
+          g.lineWidth = 1.2;
+          const rr = 60 * (1.4 - a * 1.2);
+          g.beginPath(); g.ellipse(x, y, rr, rr * 0.43, 0, 0, TAU); g.stroke();
+          break;
+        }
+        case 'scan': {
+          const r = C.SCAN_R * (1 - a);
+          g.strokeStyle = 'rgba(120,235,255,' + (0.55 * a).toFixed(3) + ')';
+          g.lineWidth = 2;
+          g.beginPath(); g.ellipse(x, y, r * 60, r * 25.6, 0, 0, TAU); g.stroke();
+          g.fillStyle = 'rgba(120,235,255,' + (0.08 * a).toFixed(3) + ')';
+          g.beginPath(); g.ellipse(x, y, r * 60, r * 25.6, 0, 0, TAU); g.fill();
+          break;
+        }
+        case 'reveal': {
+          const pulse = 0.6 + 0.4 * Math.sin(this.time * 9);
+          const col = ev.global ? '255,200,90' : '255,90,80';
+          g.fillStyle = 'rgba(' + col + ',' + (0.85 * a * pulse).toFixed(3) + ')';
+          g.beginPath(); g.arc(x, y, 5, 0, TAU); g.fill();
+          g.strokeStyle = 'rgba(' + col + ',' + (0.6 * a).toFixed(3) + ')';
+          g.lineWidth = 1.5;
+          g.beginPath(); g.arc(x, y, 12 + 5 * pulse, 0, TAU); g.stroke();
+          g.beginPath();
+          for (let k = 0; k < 4; k++) {
+            const ang = k * Math.PI / 2 + Math.PI / 4;
+            g.moveTo(x + Math.cos(ang) * 20, y + Math.sin(ang) * 20 * 0.43);
+            g.lineTo(x + Math.cos(ang) * 28, y + Math.sin(ang) * 28 * 0.43);
+          }
+          g.stroke();
+          break;
+        }
+        case 'shot': {
+          /* 光束:从巨幕边缘打进 */
+          const bA = clamp(1 - (C.BEAM_LIFE - Math.max(0, ev.t - (ev.life - C.BEAM_LIFE))) / C.BEAM_LIFE, 0, 1);
+          if (bA > 0) {
+            const grd = g.createLinearGradient(x, 0, x, y);
+            grd.addColorStop(0, 'rgba(220,245,255,' + (0.9 * bA).toFixed(3) + ')');
+            grd.addColorStop(1, 'rgba(140,220,255,' + (0.25 * bA).toFixed(3) + ')');
+            g.strokeStyle = grd;
+            g.lineWidth = 3;
+            g.beginPath(); g.moveTo(x, 2); g.lineTo(x, y); g.stroke();
+          }
+          /* 落点闪光 */
+          const cA = clamp(a * 2, 0, 1);
+          const col = ev.hit ? '255,90,70' : '180,230,255';
+          const rg = g.createRadialGradient(x, y, 0, x, y, 26 * (1.6 - a));
+          rg.addColorStop(0, 'rgba(' + col + ',' + (0.85 * cA).toFixed(3) + ')');
+          rg.addColorStop(1, 'rgba(' + col + ',0)');
+          g.fillStyle = rg;
+          g.beginPath(); g.arc(x, y, 26 * (1.6 - a), 0, TAU); g.fill();
+          g.strokeStyle = 'rgba(' + col + ',' + (0.5 * cA).toFixed(3) + ')';
+          g.lineWidth = 1.5;
+          g.beginPath(); g.arc(x, y, 7 + 10 * (1 - a), 0, TAU); g.stroke();
+          if (ev.hit) {
+            g.fillStyle = 'rgba(255,90,70,' + (0.9 * cA).toFixed(3) + ')';
+            g.beginPath(); g.arc(x, y, 3.2, 0, TAU); g.fill();
+          }
+          break;
+        }
+      }
+    }
+
+    /* 漂浮文字 */
+    for (const f of st.feed) {
+      const a = clamp(f.t / f.life, 0, 1);
+      const x = mapPX(f.x), y = mapPY(f.z) - 10 - (1 - a) * 14;
+      drawText(g, f.text, x, y, 12, f.color, 'center', a, '"PingFang SC","Hiragino Sans GB",sans-serif');
+    }
+
+    /* 瞄准标记 */
+    if (st.aim && st.aim.valid) {
+      const x = mapPX(st.aim.mx), y = mapPY(st.aim.mz);
+      g.strokeStyle = 'rgba(140,240,255,0.75)';
+      g.lineWidth = 1.5;
+      g.beginPath(); g.arc(x, y, 7, 0, TAU); g.stroke();
+      g.beginPath();
+      g.moveTo(x - 12, y); g.lineTo(x - 4, y);
+      g.moveTo(x + 4, y); g.lineTo(x + 12, y);
+      g.moveTo(x, y - 12 * 0.43); g.lineTo(x, y - 4 * 0.43);
+      g.moveTo(x, y + 4 * 0.43); g.lineTo(x, y + 12 * 0.43);
+      g.stroke();
+    }
+
+    /* 全域扫描扫掠 */
+    if (st.globalSweepT > 0) {
+      const p = 1 - st.globalSweepT / C.ENDGAME.sweep;
+      const sy = p * H;
+      const grd = g.createLinearGradient(0, sy - 30, 0, sy + 30);
+      grd.addColorStop(0, 'rgba(255,210,110,0)');
+      grd.addColorStop(0.5, 'rgba(255,210,110,0.28)');
+      grd.addColorStop(1, 'rgba(255,210,110,0)');
+      g.fillStyle = grd;
+      g.fillRect(0, sy - 30, W, 60);
+      g.strokeStyle = 'rgba(255,220,140,0.8)';
+      g.lineWidth = 2;
+      g.beginPath(); g.moveTo(0, sy); g.lineTo(W, sy); g.stroke();
+    }
+    g.restore();
+
+    /* 外框 + 扫描线 + 暗角 + 噪点 */
+    g.strokeStyle = 'rgba(40,70,100,1)';
+    g.lineWidth = 8;
+    g.strokeRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(150,220,255,0.35)';
+    g.lineWidth = 1;
+    g.strokeRect(4, 4, W - 8, H - 8);
+    g.fillStyle = 'rgba(0,0,0,0.16)';
+    for (let i = 0; i < H; i += 4) g.fillRect(0, i, W, 1);
+    const vg = g.createRadialGradient(W / 2, H / 2, H * 0.4, W / 2, H / 2, H * 0.95);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.42)');
+    g.fillStyle = vg;
+    g.fillRect(0, 0, W, H);
+    if (RNG() < 0.05) {
+      g.fillStyle = 'rgba(160,220,255,0.05)';
+      g.fillRect(0, RNG() * H, W, 1);
+    }
+  }
+
+  /* ---------- 主渲染 ---------- */
+  render(st) {
+    const ctx = this.ctx, W = this.W, H = this.H;
+    const cam = st.cam;
+    this.time += st.dt || 0.016;
+
+    /* 巨幕蓝图 */
+    this.drawMap(st);
+
+    const f = (H * 0.5) / Math.tan(this.vfov() / 2);
+    const cy = H / 2;
+    const pitchPx = Math.tan(cam.pitch) * f;
+
+    /* 天顶与地面 */
+    let ceil = ctx.createLinearGradient(0, 0, 0, cy + pitchPx);
+    ceil.addColorStop(0, '#04060a');
+    ceil.addColorStop(1, '#0b1018');
+    ctx.fillStyle = ceil;
+    ctx.fillRect(0, 0, W, Math.max(0, cy + pitchPx));
+    let floor = ctx.createLinearGradient(0, cy + pitchPx, 0, H);
+    floor.addColorStop(0, '#131922');
+    floor.addColorStop(0.25, '#0d1117');
+    floor.addColorStop(1, '#04060a');
+    ctx.fillStyle = floor;
+    ctx.fillRect(0, cy + pitchPx, W, H - (cy + pitchPx));
+
+    /* 地面网格 */
+    ctx.strokeStyle = 'rgba(120,190,255,0.09)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let gx = -7; gx <= 7; gx++) {
+      let started = false;
+      for (let z = 0; z <= 15; z += 0.5) {
+        const p = this.project(st, gx, 0, z);
+        if (!p) { started = false; continue; }
+        if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+        else ctx.lineTo(p.x, p.y);
+      }
+    }
+    for (let gz = 1; gz <= 14; gz++) {
+      let started = false;
+      for (let x = -8; x <= 8; x += 0.5) {
+        const p = this.project(st, x, 0, gz);
+        if (!p) { started = false; continue; }
+        if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+        else ctx.lineTo(p.x, p.y);
+      }
+    }
+    ctx.stroke();
+
+    /* 射线投射墙体 */
+    const camGX = cam.x + 8;
+
+    for (let i = 0; i < W; i++) {
+      const rayA = cam.yaw - C.FOV / 2 + C.FOV * (i / W);
+      const rayX = Math.sin(rayA), rayZ = -Math.cos(rayA);
+      let mapX = Math.floor(camGX), mapZ = Math.floor(cam.z);
+      const ddx = Math.abs(1 / rayX), ddz = Math.abs(1 / rayZ);
+      let stepX, stepZ, sideX, sideZ;
+      if (rayX < 0) { stepX = -1; sideX = (camGX - mapX) * ddx; }
+      else { stepX = 1; sideX = (mapX + 1 - camGX) * ddx; }
+      if (rayZ < 0) { stepZ = -1; sideZ = (cam.z - mapZ) * ddz; }
+      else { stepZ = 1; sideZ = (mapZ + 1 - cam.z) * ddz; }
+      let side = 0, type = 0, hx = 0, hz = 0, t = 0;
+      for (let s = 0; s < 80; s++) {
+        if (sideX < sideZ) { sideX += ddx; mapX += stepX; side = 0; }
+        else { sideZ += ddz; mapZ += stepZ; side = 1; }
+        t = side === 1 ? sideZ - ddz : sideX - ddx;
+        hx = cam.x + t * rayX;
+        hz = cam.z + t * rayZ;
+        if (mapZ < 0) { type = 1; break; }                      // 巨幕墙
+        if (mapZ >= 15 || mapX < 0 || mapX >= 16) { type = 2; break; }  // 混凝土墙
+        if (MapGrid.isObs(mapX, mapZ)) { type = 3; break; }      // 障碍物
+      }
+      const perp = t * Math.cos(rayA - cam.yaw);
+      const fogK = clamp(1.35 - perp * 0.055, 0.2, 1);
+      let sk = type === 1 ? 0 : clamp(1 - hz / 16, 0, 1);
+      sk = sk * sk * 0.85;   // 屏幕光:平方衰减,更柔和
+      const wallH = type === 1 ? C.SCREEN_H : (type === 3 ? 2.3 : C.WALL_H);
+      const floorY = cy + ((cam.y - 0) * f) / perp + pitchPx;
+      const topY = floorY - (wallH * f) / perp;
+
+      if (type === 1) {
+        /* 巨幕:采样蓝图 */
+        const u = clamp((hx + 8) / 16, 0, 1);
+        const sx = clamp(Math.floor(u * (C.MAP_W - 1)), 0, C.MAP_W - 1);
+        const bezTop = cy + ((cam.y - C.SCREEN_Y0) * f) / perp + pitchPx;
+        const panelTop = bezTop - ((C.SCREEN_H - C.SCREEN_Y0) * f) / perp;
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = 'rgb(' + (26 * fogK | 0) + ',' + (29 * fogK | 0) + ',' + (38 * fogK | 0) + ')';
+        ctx.fillRect(i, bezTop, 1, floorY - bezTop);
+        ctx.fillStyle = 'rgba(120,220,255,' + (0.55 * fogK).toFixed(3) + ')';
+        ctx.fillRect(i, bezTop - 1, 1, 2);
+        ctx.globalAlpha = clamp(fogK * 1.15, 0, 1);
+        ctx.drawImage(this.mapCv, sx, 0, 1, C.MAP_H, i, panelTop, 1, bezTop - panelTop);
+        ctx.globalAlpha = 1;
+      } else {
+        let r, g2, b;
+        if (type === 3) {
+          r = 48; g2 = 54; b = 66;
+        } else {
+          r = 64; g2 = 72; b = 86;
+          r += 78 * sk; g2 += 95 * sk; b += 112 * sk;
+        }
+        const h = hash2(mapX, mapZ) * 0.22 + 0.88;
+        ctx.fillStyle = 'rgb(' + ((r * h * fogK) | 0) + ',' + ((g2 * h * fogK) | 0) + ',' + ((b * h * fogK) | 0) + ')';
+        ctx.fillRect(i, topY, 1, floorY - topY);
+        /* 障碍物警示带 */
+        if (type === 3) {
+          const bandH = (0.2 * f) / perp;
+          if ((((hx + hz) * 6) | 0) % 2 === 0) {
+            ctx.fillStyle = 'rgba(184,150,60,' + fogK.toFixed(3) + ')';
+          } else {
+            ctx.fillStyle = 'rgba(20,22,26,' + fogK.toFixed(3) + ')';
+          }
+          ctx.fillRect(i, topY, 1, Math.min(bandH, floorY - topY));
+          ctx.fillStyle = 'rgba(140,200,255,' + (0.14 * fogK).toFixed(3) + ')';
+          ctx.fillRect(i, topY + Math.min(bandH, floorY - topY), 1, 1);
+        }
+      }
+    }
+
+    /* 顶部压暗 */
+    const topShade = ctx.createLinearGradient(0, 0, 0, H * 0.55);
+    topShade.addColorStop(0, 'rgba(0,0,0,0.34)');
+    topShade.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = topShade;
+    ctx.fillRect(0, 0, W, H * 0.55);
+
+    /* 3D 特效(玩家房间) */
+    this.drawFx3d(ctx, st, f, cy, pitchPx);
+
+    /* 巨幕边缘闪(敌方开火位置) */
+    if (st.edgeFlash && st.edgeFlash.t > 0) {
+      const p = this.project(st, st.edgeFlash.u * 16 - 8, C.SCREEN_Y0 + 0.05, 0.08);
+      if (p) {
+        const a = clamp(st.edgeFlash.t / 0.55, 0, 1);
+        const grd = ctx.createLinearGradient(p.x - 26, 0, p.x + 26, 0);
+        grd.addColorStop(0, 'rgba(0,0,0,0)');
+        grd.addColorStop(0.5, st.edgeFlash.color === '#ff5040' ? 'rgba(255,80,64,' + (0.85 * a).toFixed(3) + ')' : 'rgba(180,230,255,' + (0.7 * a).toFixed(3) + ')');
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grd;
+        ctx.fillRect(p.x - 26, p.y - 4, 52, 10);
+      }
+    }
+
+    /* 尘埃 */
+    ctx.fillStyle = 'rgba(150,210,255,0.5)';
+    for (const d of this.dust) {
+      const tw = 0.06 + 0.05 * Math.sin(this.time * 1.4 + d.ph);
+      const p = this.project(st, d.x, d.y, d.z);
+      if (!p) continue;
+      const a = clamp(0.16 - p.depth * 0.008, 0, 0.14) * (0.5 + 0.5 * Math.sin(this.time * 2.1 + d.ph * 3));
+      if (a <= 0) continue;
+      ctx.globalAlpha = a;
+      ctx.fillRect(p.x, p.y, 1.6, 1.6);
+    }
+    ctx.globalAlpha = 1;
+
+    /* 枪械视图 */
+    this.drawGun(ctx, st);
+
+    /* 受击方向指示 */
+    if (st.lastHitAt && st.lastHitAt.t > 0 && st.redFlash > 0.4) {
+      const p = this.project(st, st.lastHitAt.x, 1.2, st.lastHitAt.z);
+      if (p) {
+        const ang = Math.atan2(p.y - cy, p.x - W / 2);
+        const ex = W / 2 + Math.cos(ang) * (W * 0.42);
+        const ey = cy + Math.sin(ang) * (H * 0.42);
+        ctx.save();
+        ctx.translate(ex, ey);
+        ctx.rotate(ang);
+        ctx.fillStyle = 'rgba(255,70,60,' + (st.redFlash * 0.85).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.moveTo(12, 0); ctx.lineTo(-4, -8); ctx.lineTo(-1, 0); ctx.lineTo(-4, 8);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    /* 准星 */
+    this.drawCrosshair(ctx, st);
+
+    /* 屏幕空间覆盖层 */
+    if (st.redFlash > 0) {
+      const rg = ctx.createRadialGradient(W / 2, H / 2, H * 0.2, W / 2, H / 2, H * 0.75);
+      rg.addColorStop(0, 'rgba(255,30,20,0)');
+      rg.addColorStop(1, 'rgba(255,30,20,' + (st.redFlash * 0.6).toFixed(3) + ')');
+      ctx.fillStyle = rg;
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(255,40,30,' + (st.redFlash * 0.14).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+    if (st.confirmFlash > 0) {
+      ctx.fillStyle = 'rgba(140,240,255,' + (st.confirmFlash * 0.1).toFixed(3) + ')';
+      ctx.fillRect(0, 0, W, H);
+    }
+    /* 扫描线 */
+    ctx.save();
+    ctx.globalAlpha = 0.05;
+    ctx.fillStyle = this.patScanlines();
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+    /* 暗角 */
+    ctx.fillStyle = this.vignette();
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  drawFx3d(ctx, st, f, cy, pitchPx) {
+    for (const ev of st.fx3d) {
+      const a = clamp(ev.t / ev.life, 0, 1);
+      if (ev.kind === 'pulse') {
+        const r = C.SCAN_R * (1 - a) + 0.3;
+        const pts = [];
+        for (let k = 0; k <= 26; k++) {
+          const ang = k / 26 * TAU;
+          pts.push(this.project(st, ev.x + Math.cos(ang) * r, 0.05, ev.z + Math.sin(ang) * r));
+        }
+        ctx.strokeStyle = 'rgba(120,235,255,' + (0.5 * a).toFixed(3) + ')';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        let started = false;
+        for (const p of pts) {
+          if (!p) { started = false; continue; }
+          if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+      } else if (ev.kind === 'incoming') {
+        const p0 = this.project(st, ev.x, 0, ev.z);
+        const p1 = this.project(st, ev.x, 3.2, ev.z);
+        if (p0 && p1) {
+          const col = ev.hit ? '255,80,64' : '200,240,255';
+          ctx.strokeStyle = 'rgba(' + col + ',' + (0.9 * a).toFixed(3) + ')';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+          const rg = ctx.createRadialGradient(p0.x, p0.y, 0, p0.x, p0.y, 30);
+          rg.addColorStop(0, 'rgba(' + col + ',' + (0.7 * a).toFixed(3) + ')');
+          rg.addColorStop(1, 'rgba(' + col + ',0)');
+          ctx.fillStyle = rg;
+          ctx.fillRect(p0.x - 30, p0.y - 30, 60, 60);
+        }
+      } else if (ev.kind === 'mark') {
+        const pulse = 0.6 + 0.4 * Math.sin(this.time * 8);
+        const pts = [];
+        for (let k = 0; k <= 22; k++) {
+          const ang = k / 22 * TAU;
+          pts.push(this.project(st, ev.x + Math.cos(ang) * 0.8, 0.06, ev.z + Math.sin(ang) * 0.8));
+        }
+        ctx.strokeStyle = 'rgba(255,200,90,' + (0.75 * a * pulse).toFixed(3) + ')';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        let started = false;
+        for (const p of pts) {
+          if (!p) { started = false; continue; }
+          if (!started) { ctx.moveTo(p.x, p.y); started = true; }
+          else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+        const p0 = this.project(st, ev.x, 0, ev.z);
+        const p1 = this.project(st, ev.x, 2.8, ev.z);
+        if (p0 && p1) {
+          ctx.strokeStyle = 'rgba(255,200,90,' + (0.35 * a * pulse).toFixed(3) + ')';
+          ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(p0.x, p0.y); ctx.lineTo(p1.x, p1.y); ctx.stroke();
+        }
+      }
+    }
+  }
+
+  drawGun(ctx, st) {
+    const W = this.W, H = this.H;
+    const p = st.player;
+    const ready = 1 - clamp(p.gunCd / C.GUN_CD, 0, 1);
+    const bobX = Math.sin(st.bob * 2) * 5;
+    const bobY = Math.abs(Math.cos(st.bob)) * 5;
+    const swX = clamp(st.sway, -1, 1) * 12;
+    const rec = p.recoil;
+    const gx = W * 0.62 + swX + bobX;
+    const gy = H - 26 - bobY * 0.7 + rec * 22;
+    ctx.save();
+    ctx.translate(gx, gy);
+    ctx.rotate(-0.06 + rec * 0.05 + swX * 0.002);
+    ctx.scale(clamp(H / 800, 0.7, 1.4), clamp(H / 800, 0.7, 1.4));
+    /* 枪身 */
+    ctx.fillStyle = '#14181f';
+    ctx.strokeStyle = '#2c3644';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-130, 26); ctx.lineTo(-96, -8); ctx.lineTo(-60, -16);
+    ctx.lineTo(30, -22); ctx.lineTo(96, -14); ctx.lineTo(140, 8);
+    ctx.lineTo(118, 34); ctx.lineTo(40, 26); ctx.lineTo(-60, 44); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    /* 枪管 */
+    ctx.fillStyle = '#0d1014';
+    ctx.fillRect(88, -20, 78, 12);
+    ctx.fillRect(88, -2, 60, 8);
+    ctx.strokeStyle = '#2c3644';
+    ctx.strokeRect(88, -20, 78, 12);
+    /* 能量核心 */
+    const glow = ready;
+    ctx.fillStyle = 'rgba(110,235,255,' + (0.35 + 0.6 * glow).toFixed(3) + ')';
+    ctx.fillRect(6, -14, 62, 8);
+    ctx.fillStyle = 'rgba(110,235,255,' + (0.25 + 0.5 * glow).toFixed(3) + ')';
+    ctx.fillRect(20, -30, 26, 8);
+    /* 细节 */
+    ctx.strokeStyle = 'rgba(140,220,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(-96, -8); ctx.lineTo(-40, -14);
+    ctx.moveTo(-30, 30); ctx.lineTo(40, 20);
+    ctx.stroke();
+    /* 枪口闪光 */
+    if (rec > 0.62) {
+      const a = (rec - 0.62) / 0.38;
+      ctx.save();
+      ctx.translate(166, -14);
+      const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, 46);
+      rg.addColorStop(0, 'rgba(255,255,255,' + (0.95 * a).toFixed(3) + ')');
+      rg.addColorStop(0.4, 'rgba(140,240,255,' + (0.6 * a).toFixed(3) + ')');
+      rg.addColorStop(1, 'rgba(140,240,255,0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath(); ctx.arc(0, 0, 46, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.8 * a).toFixed(3) + ')';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let k = 0; k < 4; k++) {
+        const ang = k * Math.PI / 2 + 0.3;
+        ctx.moveTo(Math.cos(ang) * 6, Math.sin(ang) * 6);
+        ctx.lineTo(Math.cos(ang) * (18 + a * 16), Math.sin(ang) * (18 + a * 16));
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  drawCrosshair(ctx, st) {
+    const W = this.W, H = this.H;
+    const x = W / 2, y = H / 2;
+    const on = st.aim && st.aim.valid;
+    const col = on ? '140,240,255' : '220,230,240';
+    const a = on ? 0.95 : 0.45;
+    ctx.strokeStyle = 'rgba(' + col + ',' + a.toFixed(3) + ')';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(x, y, 9, 0, TAU);
+    ctx.stroke();
+    ctx.beginPath();
+    for (let k = 0; k < 4; k++) {
+      const ang = k * Math.PI / 2;
+      ctx.moveTo(x + Math.cos(ang) * 13, y + Math.sin(ang) * 13);
+      ctx.lineTo(x + Math.cos(ang) * 19, y + Math.sin(ang) * 19);
+    }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(' + col + ',' + a.toFixed(3) + ')';
+    ctx.beginPath();
+    ctx.arc(x, y, 1.6, 0, TAU);
+    ctx.fill();
+    /* 侦测就绪 */
+    if (st.player.scanReady && on) {
+      ctx.fillStyle = 'rgba(140,240,255,0.9)';
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('◈ 侦测就绪', x, y + 26);
+    }
+  }
+}
+
+/* ===== 50-brain.js ===== */
+'use strict';
+/* ================= AI:信念热力图 + 行为大脑 ================= */
+
+/* 64×60 格(每格 0.25m)覆盖 16m×15m,存"玩家在此"的相对置信度 */
+class Heatmap {
+  constructor(w, h) {
+    this.w = w; this.h = h;
+    this.v = new Float32Array(w * h);
+    this.blurT = 0;
+    this.reset();
+  }
+  reset() { this.v.fill(1 / (this.w * this.h)); }
+
+  /* 世界坐标(米)→ 高斯注入 */
+  add(x, z, sigma, wgt) {
+    const cx = (x + 8) / 16 * this.w;
+    const cz = z / 15 * this.h;
+    const r = Math.max(1, Math.ceil(sigma / 0.25 * 2.6));
+    const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(this.w - 1, Math.ceil(cx + r));
+    const z0 = Math.max(0, Math.floor(cz - r)), z1 = Math.min(this.h - 1, Math.ceil(cz + r));
+    const s2 = 2 * sigma * sigma;
+    for (let gz = z0; gz <= z1; gz++) {
+      const dz = (gz + 0.5) / this.h * 15 - z;
+      for (let gx = x0; gx <= x1; gx++) {
+        const dx = (gx + 0.5) / this.w * 16 - 8 - x;
+        const d2 = dx * dx + dz * dz;
+        if (d2 < (sigma * 2.6) * (sigma * 2.6))
+          this.v[gz * this.w + gx] += wgt * Math.exp(-d2 / s2);
+      }
+    }
+  }
+
+  /* 每帧衰减(向均匀回归) + 周期模糊 */
+  step(dt) {
+    const k = 1 - Math.pow(0.5, dt / 13);
+    const u = 1 / (this.w * this.h);
+    for (let i = 0; i < this.v.length; i++) this.v[i] = u + (this.v[i] - u) * (1 - k);
+    this.blurT += dt;
+    if (this.blurT > 0.24) { this.blurT = 0; this.blur(); }
+  }
+  blur() {
+    const w = this.w, h = this.h, v = this.v, t = new Float32Array(w * h);
+    for (let z = 0; z < h; z++) {
+      const z0 = Math.max(0, z - 1), z1 = Math.min(h - 1, z + 1);
+      for (let x = 0; x < w; x++) {
+        const x0 = Math.max(0, x - 1), x1 = Math.min(w - 1, x + 1);
+        let s = 0, n = 0;
+        for (let zz = z0; zz <= z1; zz++)
+          for (let xx = x0; xx <= x1; xx++) { s += v[zz * w + xx]; n++; }
+        t[z * w + x] = s / n;
+      }
+    }
+    this.v.set(t);
+  }
+
+  max() {
+    let mi = 0, mv = -1;
+    for (let i = 0; i < this.v.length; i++) if (this.v[i] > mv) { mv = this.v[i]; mi = i; }
+    const u = 1 / (this.w * this.h);
+    return {
+      x: ((mi % this.w) + 0.5) / this.w * 16 - 8,
+      z: ((mi / this.w | 0) + 0.5) / this.h * 15,
+      conf: mv / u,   // 相对均匀分布的倍数
+    };
+  }
+}
+
+/* 敌方大脑:接收感知事件,输出控制指令 */
+class Brain {
+  constructor(diffKey) {
+    this.d = DIFF[diffKey] || DIFF.normal;
+    this.hm = new Heatmap(64, 60);
+    this.now = 0;
+    this.mood = 'hunt'; this.moodT = 0;
+    this.target = null; this.targetT = 0;
+    this.fireT = 3 + Math.random() * 2;   // 开局宽限
+    this.scanT = 14;
+    this.follow = null;                   // 追猎:最近命中点
+    this.dodgeUntil = 0;
+    this.lastPos = { x: 0, z: 13.5 };
+    this.stuckT = 0;
+    this.lastSoundT = -99;
+    this.believed = { x: 0, z: 7, conf: 0 };
+    this.moving = false;
+    this.fired = false;
+  }
+
+  /* 外部事件(由 Match 转发) */
+  percept(ev) {
+    const n = this.now;
+    switch (ev.kind) {
+      case 'trail':   this.hm.add(ev.x, ev.z, 1.0, 0.5); break;
+      case 'ripple':  this.hm.add(ev.x, ev.z, 1.3, 0.5); break;
+      case 'sound':   this.hm.add(ev.x, ev.z, 1.7, clamp(ev.w, 0, 1) * 1.15); this.lastSoundT = n; break;
+      case 'hit':     this.hm.add(ev.x, ev.z, 0.55, 2.6); this.follow = { x: ev.x, z: ev.z, until: n + this.d.follow + 0.6 }; this.fireT = Math.max(this.fireT, n + this.d.react * 0.4); break;
+      case 'hitMe':   this.dodgeUntil = n + 1.8; break;
+      case 'scanPulse': this.dodgeUntil = Math.max(this.dodgeUntil, n + (ev.hitMe ? 2.0 : 0.8)); break;
+      case 'reveal':  this.hm.add(ev.x, ev.z, 0.3, 4.5); this.dodgeUntil = Math.max(this.dodgeUntil, n + 0.5); this.fireT = Math.max(this.fireT, n + this.d.react); break;
+      case 'globalscan': this.hm.add(ev.x, ev.z, 0.25, 5); this.follow = { x: ev.x, z: ev.z, until: n + 1.0 }; this.fireT = Math.max(this.fireT, n + this.d.react); break;
+    }
+  }
+
+  /* 每帧思考。me = {x, z};返回 {mx, mz, run, fire, aim, scan, scanAt} */
+  think(dt, me) {
+    this.now += dt;
+    const d = this.d, n = this.now;
+    this.fired = false;
+    const ctrl = { mx: 0, mz: 0, run: false, fire: false, aim: null, scan: false, scanAt: null };
+
+    /* —— 情绪切换 —— */
+    if (n < this.dodgeUntil) this.mood = 'dodge';
+    else if (n > this.moodT) {
+      this.moodT = n + 3 + Math.random() * 4;
+      this.mood = Math.random() < d.camp ? 'ambush' : 'hunt';
+    }
+
+    const m = this.hm.max();
+    this.believed = { x: m.x, z: m.z, conf: m.conf };
+    const distToBelief = dist2d(me.x, me.z, m.x, m.z);
+
+    /* —— 开火决策 —— */
+    if (this.follow && n < this.follow.until) {
+      if (n >= this.fireT) {
+        ctrl.aim = { x: this.follow.x + gauss() * d.noise * 0.5, z: this.follow.z + gauss() * d.noise * 0.5 };
+        ctrl.fire = true; this.fired = true;
+        this.fireT = n + 0.8;
+      }
+    } else if (m.conf > d.confThresh && n >= this.fireT) {
+      const mv = this.moving ? 1.35 : 1;
+      ctrl.aim = { x: m.x + gauss() * d.noise * mv, z: m.z + gauss() * d.noise * mv };
+      ctrl.fire = true; this.fired = true;
+      this.fireT = n + rnd(d.cadence[0], d.cadence[1]);
+      if (this.mood === 'ambush') this.mood = 'hunt';
+    }
+
+    /* —— 侦测 —— */
+    if (n >= this.scanT) {
+      if (m.conf < d.confThresh * 1.7 || this.mood === 'ambush' || n - this.lastSoundT > 6) {
+        ctrl.scan = true;
+        ctrl.scanAt = { x: m.x + gauss() * 1.6, z: m.z + gauss() * 1.6 };
+        this.scanT = n + d.scanEvery * rnd(0.7, 1.3);
+      }
+    }
+
+    /* —— 移动 —— */
+    const reached = this.target && dist2d(me.x, me.z, this.target.x, this.target.z) < 0.8;
+    const speedNow = Math.hypot(me.x - this.lastPos.x, me.z - this.lastPos.z) / Math.max(dt, 0.001);
+    if (this.target && speedNow < 0.5 && this.moving) this.stuckT += dt; else this.stuckT = 0;
+    if (!this.target || reached || n > this.targetT || this.stuckT > 0.6) {
+      this.pickTarget(m, distToBelief);
+      this.targetT = n + rnd(1.6, 3.4);
+      this.stuckT = 0;
+    }
+
+    const idle = this.mood === 'ambush' && reached && this.target && this.target.stand;
+    if (!idle) {
+      const dx = this.target.x - me.x, dz = this.target.z - me.z;
+      const L = Math.hypot(dx, dz) || 1;
+      ctrl.mx = dx / L; ctrl.mz = dz / L;
+      ctrl.run = this.mood === 'dodge' ||
+        (distToBelief > 7) ||
+        (m.conf < d.confThresh * 2 && this.mood === 'hunt' && this.targetRun);
+      this.moving = true;
+    } else {
+      this.moving = false;
+      ctrl.run = false;
+    }
+    this.lastPos = { x: me.x, z: me.z };
+    return ctrl;
+  }
+
+  pickTarget(m, distToBelief) {
+    const d = this.d;
+    this.targetRun = Math.random() > d.walkBias;
+    /* 迂回接近最可能的位置(但保持一点距离,避免贴脸) */
+    if (m.conf > d.confThresh * 0.9 && this.mood === 'hunt') {
+      const ang = Math.random() * TAU;
+      const off = rnd(2.2, 4.5);
+      this.target = { x: m.x + Math.cos(ang) * off, z: m.z + Math.sin(ang) * off, stand: false };
+      this.target = MapGrid.collide(this.target.x, this.target.z, 0.7);
+      return;
+    }
+    if (this.mood === 'ambush') {
+      /* 找一个"声影"位置蹲守 */
+      const spots = [];
+      for (const o of MapGrid.obs) {
+        spots.push({ x: (o.x0 + o.x1) / 2, z: o.z1 + 0.8, stand: true });
+        spots.push({ x: (o.x0 + o.x1) / 2, z: o.z0 - 0.8, stand: true });
+      }
+      const s = pick(spots);
+      this.target = MapGrid.collide(s.x, s.z, 0.5);
+      if (!MapGrid.insideObs(this.target.x, this.target.z)) { this.target.stand = true; return; }
+    }
+    this.target = MapGrid.randomFree(1.0, Math.random);
+    this.target.stand = false;
+  }
+}
+
+/* ===== 60-match.js ===== */
+'use strict';
+/* ================= 对战核心:回合状态机 / 痕迹 / 判定 ================= */
+
+function mkEntity(x, z) {
+  return {
+    x, z, hp: C.MAX_HP, alive: true,
+    run: false, moving: false, adrenT: 0,
+    gunCd: 0, scanCd: 0, scanActive: false, scanCharge: 0, scanPoint: null,
+    trailT: rnd(0.4, 1.0), idleT: 0, rippleT: C.RIPPLE.idle, stepT: 0,
+    recoil: 0, damageFlash: 0, lastDir: { x: 0, z: 1 },
+  };
+}
+
+class Match {
+  constructor(diffKey) {
+    this.diffKey = diffKey;
+    this.playerInput = { mx: 0, mz: 0, run: false };
+    this.enemyCtrl = { mx: 0, mz: 0, run: false, fire: false, aim: null, scan: false, scanAt: null };
+    this.aim = { valid: false, u: 0.5, v: 0.5, mx: 0, mz: 7.5 };
+    this.reset();
+  }
+
+  reset() {
+    seedRng(this.fixedSeed !== undefined ? this.fixedSeed : ((Math.random() * 1e9) | 0));
+    const sp = MAPDEF.spawn;
+    this.player = mkEntity(sp.x, sp.z);
+    this.enemy = mkEntity(sp.x, sp.z);
+    this.brain = new Brain(this.diffKey);
+    this.state = 'countdown';
+    this.countT = C.COUNTDOWN;
+    this.timeLeft = C.ROUND_T;
+    this.eventsA = [];   // 玩家房间内的事件(敌方地图可见)
+    this.eventsB = [];   // 敌方房间内的事件(玩家地图可见)
+    this.fx3d = [];      // 玩家房间的 3D 特效
+    this.feed = [];      // 玩家地图漂浮文字
+    this.hudMsg = null; this.hudMsgT = 0;
+    this.redFlash = 0; this.confirmFlash = 0;
+    this.edgeFlash = { t: 0, u: 0.5, color: '#bfe8ff' };
+    this.shake = 0;
+    this.hitstop = 0;
+    this.endingT = 0;
+    this.globalNext = C.ENDGAME.at;
+    this.globalSweepT = 0;
+    this.winner = null; this.endReason = '';
+    this.stats = { pShots: 0, pHits: 0, pScans: 0, pFound: 0, eShots: 0, eHits: 0, eScans: 0, eFound: 0 };
+    this.player.yaw = 0; this.player.pitch = 0;
+    this.countBeep = -1;
+  }
+
+  loudness(e) {
+    const base = clamp(1.15 - (e.z / 15) * 0.85, 0.18, 1);
+    const moveK = e.run ? 1 : 0.45;
+    const muffK = MapGrid.muffled(e.x, e.z) ? 0.42 : 1;
+    return base * moveK * muffK;
+  }
+
+  /* ---------- 主循环 ---------- */
+  step(dt) {
+    if (this.state === 'countdown') {
+      this.countT -= dt;
+      const b = Math.ceil(this.countT);
+      if (b !== this.countBeep && b > 0 && b <= 3) { this.countBeep = b; AudioSys.countBeep(3 - b); }
+      if (this.countT <= 0) {
+        this.state = 'play';
+        this.hudMsg = { text: '对局开始', color: '#9fd8ff', t: 1.1 };
+        AudioSys.goSting();
+      }
+      return;
+    }
+    if (this.state !== 'play' && this.state !== 'ending') return;
+
+    if (this.hitstop > 0) { this.hitstop -= dt; return; }
+    let ts = 1;
+    if (this.state === 'ending') { this.endingT -= dt; ts = 0.3; if (this.endingT <= 0) { this.finish(); return; } }
+    dt *= ts;
+
+    if (this.state === 'play') {
+      this.timeLeft -= dt;
+      if (this.timeLeft <= C.ENDGAME.at && this.globalNext > 0 && this.timeLeft <= this.globalNext) {
+        this.globalNext -= C.ENDGAME.every;
+        this.doGlobalScan();
+      }
+      if (this.timeLeft <= 0) { this.timeLeft = 0; this.endByTime(); }
+    }
+
+    /* 实体更新 */
+    if (this.obs && this.state === 'play' && this.player.alive) this.driveObserver(dt);
+    this.updateEntity(this.player, dt, this.playerInput);
+    this.updateEntity(this.enemy, dt, this.enemyCtrl);
+
+    /* 痕迹与涟漪 */
+    this.emitTrails(this.player, this.eventsA, dt);
+    this.emitTrails(this.enemy, this.eventsB, dt);
+    this.emitRipples(this.player, this.eventsA, dt);
+    this.emitRipples(this.enemy, this.eventsB, dt);
+
+    /* 脚步 */
+    this.footsteps(this.player, dt);
+    this.footstepsEnemy(this.enemy, dt);
+
+    /* 敌方大脑 */
+    if (this.state === 'play' && this.enemy.alive) {
+      const ctrl = this.brain.think(dt, this.enemy);
+      this.enemyCtrl = ctrl;
+      if (ctrl.fire) this.enemyFire(ctrl.aim);
+      if (ctrl.scan) this.enemyScan(ctrl.scanAt);
+    }
+
+    /* 扫描结算 */
+    if (this.player.scanActive) this.updateScan(this.player, dt, true);
+    if (this.enemy.scanActive) this.updateScan(this.enemy, dt, false);
+
+    /* 衰减 */
+    this.redFlash = Math.max(0, this.redFlash - dt * 2.4);
+    this.confirmFlash = Math.max(0, this.confirmFlash - dt * 3);
+    this.shake = Math.max(0, this.shake - dt * 3.2);
+    this.edgeFlash.t = Math.max(0, this.edgeFlash.t - dt);
+    this.hudMsgT = Math.max(0, this.hudMsgT - dt);
+    if (this.hudMsgT <= 0) this.hudMsg = null;
+
+    this.prune(this.eventsA, dt);
+    this.prune(this.eventsB, dt);
+    this.prune(this.fx3d, dt);
+    this.prune(this.feed, dt);
+  }
+
+  prune(arr, dt) {
+    for (let i = arr.length - 1; i >= 0; i--) {
+      arr[i].t -= dt;
+      if (arr[i].t <= 0) arr.splice(i, 1);
+    }
+  }
+
+  updateEntity(e, dt, input) {
+    const speed = (e.run ? C.RUN : C.WALK) * (e.adrenT > 0 ? C.ADRENALINE_MULT : 1);
+    if (input && (input.mx || input.mz)) {
+      const L = Math.hypot(input.mx, input.mz) || 1;
+      e.lastDir.x = input.mx / L;
+      e.lastDir.z = input.mz / L;
+      const nx = e.x + (input.mx / L) * speed * dt;
+      const nz = e.z + (input.mz / L) * speed * dt;
+      const c1 = MapGrid.collide(nx, e.z, C.PLAYER_R);
+      const c2 = MapGrid.collide(c1.x, nz, C.PLAYER_R);
+      e.x = c2.x; e.z = c2.z;
+      e.moving = true;
+    } else e.moving = false;
+    e.adrenT = Math.max(0, e.adrenT - dt);
+    e.gunCd = Math.max(0, e.gunCd - dt);
+    e.scanCd = Math.max(0, e.scanCd - dt);
+    e.recoil = Math.max(0, e.recoil - dt * 6);
+    e.damageFlash = Math.max(0, e.damageFlash - dt * 3);
+  }
+
+  /* ---------- 痕迹(移动残留,对敌方地图可见) ---------- */
+  emitTrails(e, room, dt) {
+    if (!e.moving) { e.trailT = rnd(0.4, 1.0); return; }
+    const cfg = e.run ? C.TRAIL_RUN : C.TRAIL_WALK;
+    e.trailT -= dt;
+    if (e.trailT <= 0) {
+      e.trailT = rnd(cfg.every[0], cfg.every[1]);
+      const x = e.x + gauss() * cfg.noise;
+      const z = e.z + gauss() * cfg.noise;
+      room.push({ kind: 'trail', x, z, dx: e.lastDir.x * 0.4, dz: e.lastDir.z * 0.4, life: cfg.life, t: cfg.life, alpha: cfg.alpha });
+      if (room === this.eventsA) this.brain.percept({ kind: 'trail', x, z });
+      else if (this.obs) this.obs.percept({ kind: 'trail', x, z });
+      if (room === this.eventsB && this.state === 'play') AudioSys.traceTick(e.x / 8);
+    }
+  }
+
+  /* ---------- 涟漪(久站暴露) ---------- */
+  emitRipples(e, room, dt) {
+    if (e.moving) { e.idleT = 0; e.rippleT = C.RIPPLE.every; return; }
+    e.idleT += dt;
+    if (e.idleT < C.RIPPLE.idle) return;
+    e.rippleT -= dt;
+    if (e.rippleT <= 0) {
+      e.rippleT = C.RIPPLE.every;
+      const x = e.x + gauss() * C.RIPPLE.noise;
+      const z = e.z + gauss() * C.RIPPLE.noise;
+      room.push({ kind: 'ripple', x, z, life: C.RIPPLE.life, t: C.RIPPLE.life, alpha: C.RIPPLE.alpha });
+      if (room === this.eventsA) this.brain.percept({ kind: 'ripple', x, z });
+      else if (this.obs) this.obs.percept({ kind: 'ripple', x, z });
+      if (room === this.eventsB && this.state === 'play') AudioSys.traceTick(e.x / 8);
+    }
+  }
+
+  /* ---------- 脚步 ---------- */
+  footsteps(e, dt) {
+    if (!e.moving) { e.stepT = 0.2; return; }
+    e.stepT -= dt;
+    if (e.stepT <= 0) {
+      e.stepT = e.run ? 0.42 : 0.62;
+      AudioSys.ownStep(e.run);
+      const w = this.loudness(e);
+      this.brain.percept({
+        kind: 'sound',
+        x: e.x + gauss() * 1.0, z: e.z + gauss() * 0.8, w,
+      });
+    }
+  }
+
+  footstepsEnemy(e, dt) {
+    if (!e.moving) { e.stepT = 0.2; return; }
+    e.stepT -= dt;
+    if (e.stepT <= 0) {
+      e.stepT = e.run ? 0.42 : 0.62;
+      const w = this.loudness(e);
+      AudioSys.enemyStep(e.run, w, MapGrid.muffled(e.x, e.z), e.x / 8);
+      if (this.obs) this.obs.percept({ kind: 'sound', x: e.x + gauss() * 1.0, z: e.z + gauss() * 0.8, w });
+    }
+  }
+
+  /* ---------- 玩家射击 ---------- */
+  playerFire() {
+    if (this.state !== 'play' || !this.player.alive || this.player.gunCd > 0) return 'busy';
+    if (!this.aim.valid) return 'offscreen';
+    this.player.gunCd = C.GUN_CD;
+    this.stats.pShots++;
+    const px = clamp(this.aim.mx, -7.9, 7.9), pz = clamp(this.aim.mz, 0.1, 14.9);
+    const d = dist2d(px, pz, this.enemy.x, this.enemy.z);
+    const hit = d < C.GUN_RADIUS;
+    this.eventsB.push({ kind: 'shot', x: px, z: pz, life: C.FLASH_LIFE, t: C.FLASH_LIFE, hit });
+    this.feed.push({
+      x: px, z: pz,
+      text: hit ? '命中目标' : '未命中',
+      color: hit ? '#ff6a5e' : '#9fd8ff',
+      life: 1.15, t: 1.15,
+    });
+    AudioSys.gunshot();
+    this.player.recoil = 1;
+    this.shake = Math.max(this.shake, 0.4);
+    if (hit) {
+      this.stats.pHits++;
+      AudioSys.hitConfirm();
+      this.confirmFlash = 0.5;
+      this.hudMsg = { text: '命中目标', color: '#ff6a5e', t: 0.9 };
+      this.hitstop = C.HITSTOP;
+      this.damageEnemy(px, pz);
+      if (this.obs) this.obs.percept({ kind: 'hit', x: px, z: pz });
+    } else {
+      AudioSys.impactDistant(false);
+      if (d < 2.8) this.brain.percept({ kind: 'hitMe' });   // 差点被找到 → 转移
+    }
+    return 'ok';
+  }
+
+  damageEnemy(px, pz) {
+    const e = this.enemy;
+    e.hp -= C.GUN_DMG;
+    e.adrenT = C.ADRENALINE_T;
+    this.brain.percept({ kind: 'hitMe' });
+    if (e.hp <= 0) {
+      e.hp = 0; e.alive = false;
+      this.winner = 'player'; this.endReason = 'kill';
+      this.state = 'ending'; this.endingT = C.KILL_SLOW_T;
+      this.hudMsg = { text: '目标已消灭', color: '#ff6a5e', t: 2 };
+      AudioSys.hitTaken();
+    }
+  }
+
+  /* ---------- 敌方射击 ---------- */
+  enemyFire(aim) {
+    if (this.state !== 'play' || !this.enemy.alive) return;
+    this.stats.eShots++;
+    const px = clamp(aim.x, -7.9, 7.9), pz = clamp(aim.z, 0.1, 14.9);
+    const d = dist2d(px, pz, this.player.x, this.player.z);
+    const hit = d < C.GUN_RADIUS;
+    this.eventsA.push({ kind: 'shot', x: px, z: pz, life: C.FLASH_LIFE, t: C.FLASH_LIFE, hit });
+    this.fx3d.push({ kind: 'incoming', x: px, z: pz, life: C.INCOMING_LIFE, t: C.INCOMING_LIFE, hit });
+    this.edgeFlash = { t: 0.55, u: (px + 8) / 16, color: hit ? '#ff5040' : '#bfe8ff' };
+    AudioSys.incomingShot(dist2d(px, pz, this.player.x, this.player.z), px / 8, hit);
+    if (hit) {
+      this.stats.eHits++;
+      this.brain.percept({ kind: 'hit', x: px, z: pz });
+      this.damagePlayer(px, pz);
+      if (this.obs) this.obs.percept({ kind: 'hitMe' });
+    } else if (d < C.NEAR_MISS) {
+      AudioSys.nearMiss(px / 8);
+      if (this.obs) this.obs.percept({ kind: 'hitMe' });
+    }
+  }
+
+  damagePlayer(px, pz) {
+    const p = this.player;
+    this.lastHitAt = { x: px, z: pz, t: 1.2 };
+    p.hp -= C.GUN_DMG;
+    p.adrenT = C.ADRENALINE_T;
+    p.damageFlash = 1;
+    this.redFlash = 1;
+    this.shake = Math.max(this.shake, 0.9);
+    this.hitstop = C.HITSTOP;
+    this.hudMsg = { text: '你被击中了', color: '#ff5040', t: 1.0 };
+    if (p.hp <= 0) {
+      p.hp = 0; p.alive = false;
+      this.winner = 'enemy'; this.endReason = 'kill';
+      this.state = 'ending'; this.endingT = C.KILL_SLOW_T;
+      this.hudMsg = { text: '你被消灭了', color: '#ff5040', t: 2 };
+    }
+  }
+
+  /* ---------- 侦测 ---------- */
+  playerScan() {
+    if (this.state !== 'play' || !this.player.alive) return 'busy';
+    if (this.player.scanCd > 0 || this.player.scanActive) return 'busy';
+    if (!this.aim.valid) return 'offscreen';
+    const p = this.player;
+    p.scanActive = true;
+    p.scanCharge = C.SCAN_DELAY;
+    p.scanPoint = { x: clamp(this.aim.mx, -7.5, 7.5), z: clamp(this.aim.mz, 0.5, 14.5) };
+    AudioSys.scanCharge();
+    return 'ok';
+  }
+
+  enemyScan(at) {
+    if (this.enemy.scanActive || this.enemy.scanCd > 0) return;
+    const e = this.enemy;
+    e.scanActive = true;
+    e.scanCharge = C.SCAN_DELAY;
+    e.scanPoint = { x: clamp(at.x, -7.5, 7.5), z: clamp(at.z, 0.5, 14.5) };
+  }
+
+  updateScan(e, dt, isPlayer) {
+    e.scanCharge -= dt;
+    if (e.scanCharge > 0) return;
+    e.scanActive = false;
+    e.scanCd = C.SCAN_CD;
+    const p = e.scanPoint;
+    if (isPlayer) {
+      this.stats.pScans++;
+      this.eventsB.push({ kind: 'scan', x: p.x, z: p.z, life: C.PULSE_LIFE, t: C.PULSE_LIFE });
+      const found = dist2d(p.x, p.z, this.enemy.x, this.enemy.z) < C.SCAN_R;
+      if (found) {
+        this.stats.pFound++;
+        this.eventsB.push({ kind: 'reveal', x: this.enemy.x, z: this.enemy.z, life: C.SCAN_REVEAL, t: C.SCAN_REVEAL });
+        this.feed.push({ x: p.x, z: p.z, text: '侦测到目标', color: '#ff9d5e', life: 1.2, t: 1.2 });
+        AudioSys.scanFound();
+        this.hudMsg = { text: '侦测到目标', color: '#ff9d5e', t: 1.0 };
+        if (this.obs) this.obs.percept({ kind: 'reveal', x: this.enemy.x, z: this.enemy.z });
+      } else {
+        this.feed.push({ x: p.x, z: p.z, text: '无信号', color: '#7fa8c8', life: 1.1, t: 1.1 });
+        AudioSys.scanEmpty();
+      }
+      this.brain.percept({ kind: 'scanPulse', hitMe: dist2d(p.x, p.z, this.enemy.x, this.enemy.z) < C.SCAN_R });
+    } else {
+      this.stats.eScans++;
+      const distP = dist2d(p.x, p.z, this.player.x, this.player.z);
+      const hitMe = distP < C.SCAN_R;
+      this.fx3d.push({ kind: 'pulse', x: p.x, z: p.z, life: C.PULSE_LIFE, t: C.PULSE_LIFE });
+      AudioSys.scanIncoming(distP, p.x / 8, hitMe);
+      if (hitMe) {
+        this.stats.eFound++;
+        this.hudMsg = { text: '你已被敌方侦测', color: '#ffb25e', t: 1.5 };
+        this.brain.percept({ kind: 'reveal', x: this.player.x, z: this.player.z });
+        if (this.obs) this.obs.percept({ kind: 'scanPulse', hitMe: true });
+      }
+    }
+  }
+
+  /* ---------- 终局全域扫描 ---------- */
+  doGlobalScan() {
+    this.globalSweepT = C.ENDGAME.sweep;
+    const P = this.player, E = this.enemy;
+    this.eventsA.push({ kind: 'reveal', x: P.x, z: P.z, life: C.ENDGAME.reveal, t: C.ENDGAME.reveal, global: true });
+    this.eventsB.push({ kind: 'reveal', x: E.x, z: E.z, life: C.ENDGAME.reveal, t: C.ENDGAME.reveal, global: true });
+    this.fx3d.push({ kind: 'mark', x: P.x, z: P.z, life: C.ENDGAME.reveal, t: C.ENDGAME.reveal });
+    this.brain.percept({ kind: 'globalscan', x: P.x, z: P.z });
+    if (this.obs) this.obs.percept({ kind: 'globalscan', x: E.x, z: E.z });
+    AudioSys.globalSweep();
+    this.hudMsg = { text: '全面扫描 — 双方位置已暴露', color: '#ffd76a', t: 1.6 };
+  }
+
+  /* 观战/AI 驱动:由第二个大脑控制玩家实体 */
+  driveObserver(dt) {
+    const c = this.obs.think(dt, this.player);
+    this.playerInput.mx = c.mx;
+    this.playerInput.mz = c.mz;
+    this.playerInput.run = c.run;
+    if (c.fire && c.aim) {
+      this.aim = { valid: true, u: 0.5, v: 0.5, mx: c.aim.x, mz: c.aim.z };
+      this.playerFire();
+    } else if (c.scan && c.scanAt) {
+      this.aim = { valid: true, u: 0.5, v: 0.5, mx: c.scanAt.x, mz: c.scanAt.z };
+      this.playerScan();
+    }
+  }
+
+  endByTime() {
+    if (this.player.hp > this.enemy.hp) { this.winner = 'player'; this.endReason = 'hp'; }
+    else if (this.player.hp < this.enemy.hp) { this.winner = 'enemy'; this.endReason = 'hp'; }
+    else { this.winner = 'draw'; this.endReason = 'draw'; }
+    this.state = 'ending'; this.endingT = 0.8;
+  }
+
+  finish() {
+    this.state = 'end';
+    if (this.winner === 'player') AudioSys.win();
+    else if (this.winner === 'enemy') AudioSys.lose();
+    else AudioSys.draw();
+  }
+
+  accuracy(side) {
+    const s = this.stats;
+    const shots = side === 'p' ? s.pShots : s.eShots;
+    const hits = side === 'p' ? s.pHits : s.eHits;
+    return shots ? Math.round(hits / shots * 100) : 0;
+  }
+}
+
+/* ===== 70-hud.js ===== */
+'use strict';
+/* ================= HUD / 界面 ================= */
+
+const CSS_TEXT = `
+:root { --cy: #9fd8ff; --cy2: #6fc3ff; --red: #ff5040; --amber: #ffd76a; }
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; background:#05070c;
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  color:#cfe8f7; -webkit-user-select:none; user-select:none; }
+#stage { position:fixed; inset:0; }
+#game { display:block; width:100%; height:100%; }
+#ui { position:fixed; inset:0; pointer-events:none; z-index:10; }
+.hidden { display:none !important; }
+
+/* ---------- 对局 HUD ---------- */
+.hud-top { position:absolute; top:18px; left:0; right:0; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.timer { font-family:"SF Mono",Menlo,Consolas,monospace; font-size:44px; font-weight:600;
+  color:#d9f1ff; text-shadow:0 0 18px rgba(120,210,255,.35); letter-spacing:2px; }
+.timer.urgent { color:#ff6a5e; text-shadow:0 0 18px rgba(255,80,64,.5); animation:tpulse 1s infinite; }
+@keyframes tpulse { 50% { opacity:.55; } }
+.msg { font-size:15px; letter-spacing:3px; min-height:20px; text-shadow:0 0 12px rgba(0,0,0,.8); }
+.hp { position:absolute; left:26px; bottom:26px; display:flex; align-items:center; gap:10px; }
+.hp-label { font-size:12px; letter-spacing:2px; color:#7fa8c8; }
+.hp-segs { display:flex; gap:4px; }
+.hp-seg { width:44px; height:10px; background:rgba(140,220,255,.14); border:1px solid rgba(140,220,255,.3); position:relative; overflow:hidden; }
+.hp-seg i { position:absolute; inset:0; background:linear-gradient(90deg,#4fd8ff,#a8f0ff); transform-origin:left; }
+.hp-seg.low i { background:linear-gradient(90deg,#ff5040,#ff9d5e); }
+.scan { position:absolute; right:26px; bottom:26px; display:flex; align-items:center; gap:10px; }
+.scan-label { font-size:12px; letter-spacing:2px; color:#7fa8c8; }
+.scan-ring { width:40px; height:40px; border-radius:50%; position:relative;
+  background:conic-gradient(rgba(120,230,255,.85) 0deg, rgba(120,230,255,.1) 0deg);
+  border:1px solid rgba(140,220,255,.35); display:flex; align-items:center; justify-content:center; }
+.scan-ring::after { content:''; position:absolute; inset:5px; border-radius:50%; background:#060b12; }
+.scan-ring span { position:relative; z-index:1; font-size:14px; color:#bfe8ff; }
+.scan.ready .scan-ring { border-color:rgba(140,240,255,.9); box-shadow:0 0 16px rgba(120,230,255,.5); }
+.hint { position:absolute; bottom:100px; left:50%; transform:translateX(-50%); max-width:70%;
+  text-align:center; font-size:14px; letter-spacing:1px; color:#bcd9ec;
+  background:rgba(6,11,18,.55); border:1px solid rgba(120,200,255,.18); border-radius:8px;
+  padding:8px 18px; text-shadow:0 0 8px rgba(0,0,0,.8); }
+.count { position:absolute; top:34%; left:0; right:0; text-align:center;
+  font-family:"SF Mono",Menlo,monospace; font-size:110px; font-weight:700; color:#d9f1ff;
+  text-shadow:0 0 40px rgba(120,210,255,.6); }
+.toast { position:absolute; bottom:150px; left:50%; transform:translateX(-50%);
+  font-size:13px; letter-spacing:2px; color:#ff9d8e; opacity:0; transition:opacity .2s; }
+
+/* ---------- 面板 ---------- */
+.panel-layer { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:rgba(3,6,11,.72); }
+.panel { pointer-events:auto; background:rgba(8,13,22,.92); border:1px solid rgba(120,200,255,.22);
+  border-radius:16px; padding:44px 56px; text-align:center; min-width:520px; max-width:640px;
+  box-shadow:0 0 80px rgba(30,80,130,.25), inset 0 0 60px rgba(20,50,80,.15);
+  animation:pop .35s cubic-bezier(.2,1.4,.4,1); }
+@keyframes pop { from { transform:scale(.92); opacity:0; } }
+.title { font-size:76px; font-weight:700; letter-spacing:18px; color:#e8f6ff;
+  text-shadow:0 0 30px rgba(120,210,255,.45), 0 0 80px rgba(120,210,255,.2); margin-left:18px; }
+.subtitle { margin-top:6px; font-size:13px; letter-spacing:6px; color:#6fa8d0; font-family:"SF Mono",Menlo,monospace; }
+.pitch { margin-top:22px; font-size:15px; line-height:1.9; color:#a8c8de; }
+.pitch b { color:#bfe8ff; font-weight:600; }
+.diff { margin-top:26px; display:flex; gap:10px; justify-content:center; }
+.diff button { pointer-events:auto; font-family:inherit; font-size:14px; letter-spacing:2px; color:#8fb8d4;
+  background:rgba(20,32,48,.6); border:1px solid rgba(120,200,255,.2); border-radius:8px;
+  padding:9px 26px; cursor:pointer; transition:all .15s; }
+.diff button:hover { color:#d9f1ff; border-color:rgba(140,220,255,.5); }
+.diff button.on { color:#041018; background:linear-gradient(180deg,#8fd8ff,#5fb8ee); border-color:#9fd8ff;
+  box-shadow:0 0 18px rgba(120,210,255,.4); font-weight:700; }
+.big { pointer-events:auto; font-family:inherit; margin-top:30px; font-size:19px; letter-spacing:10px;
+  color:#e8f6ff; background:linear-gradient(180deg,rgba(40,80,120,.85),rgba(18,40,64,.85));
+  border:1px solid rgba(140,220,255,.45); border-radius:10px; padding:15px 60px; cursor:pointer;
+  text-shadow:0 0 10px rgba(140,220,255,.6); transition:all .15s; }
+.big:hover { box-shadow:0 0 26px rgba(120,210,255,.4); transform:translateY(-1px); }
+.big:active { transform:translateY(1px); }
+.controls { margin-top:26px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.ctl { font-size:11.5px; letter-spacing:1px; color:#7fa8c8; background:rgba(16,26,40,.6);
+  border:1px solid rgba(120,200,255,.14); border-radius:6px; padding:6px 12px; }
+.ctl b { display:block; color:#bfe8ff; font-weight:600; font-size:12px; margin-bottom:2px; }
+.foot { margin-top:24px; font-size:11px; letter-spacing:2px; color:#4d6f8a; }
+
+/* 结算 */
+.end-title { font-size:56px; font-weight:700; letter-spacing:14px; }
+.end-title.win { color:#7fe8c0; text-shadow:0 0 30px rgba(90,230,170,.4); }
+.end-title.lose { color:#ff6a5e; text-shadow:0 0 30px rgba(255,80,64,.4); }
+.end-title.draw { color:#ffd76a; text-shadow:0 0 30px rgba(255,210,110,.4); }
+.end-reason { margin-top:10px; font-size:14px; letter-spacing:3px; color:#8fb8d4; }
+.stats { margin-top:24px; display:grid; grid-template-columns:1fr 1fr; gap:10px 26px; text-align:left; }
+.stat { display:flex; justify-content:space-between; font-size:13.5px; color:#9fc4de;
+  border-bottom:1px dashed rgba(120,200,255,.15); padding:6px 2px; }
+.stat b { color:#d9f1ff; font-family:"SF Mono",Menlo,monospace; font-weight:600; }
+.end-btns { margin-top:30px; display:flex; gap:14px; justify-content:center; }
+.end-btns button { pointer-events:auto; font-family:inherit; font-size:15px; letter-spacing:4px; padding:11px 30px;
+  border-radius:8px; cursor:pointer; transition:all .15s; }
+.btn-pri { color:#041018; background:linear-gradient(180deg,#8fd8ff,#5fb8ee); border:1px solid #9fd8ff; font-weight:700; }
+.btn-pri:hover { box-shadow:0 0 20px rgba(120,210,255,.5); }
+.btn-sec { color:#a8cfe8; background:rgba(20,32,48,.6); border:1px solid rgba(120,200,255,.25); }
+.btn-sec:hover { border-color:rgba(140,220,255,.6); }
+
+/* 暂停 */
+.pause-title { font-size:34px; letter-spacing:12px; color:#d9f1ff; }
+.sliders { margin-top:22px; display:flex; flex-direction:column; gap:14px; text-align:left; }
+.slider { display:flex; align-items:center; gap:14px; font-size:13px; color:#9fc4de; letter-spacing:2px; }
+.slider span { width:64px; }
+.slider input { flex:1; accent-color:#6fc3ff; cursor:pointer; }
+.slider em { width:44px; font-style:normal; font-family:"SF Mono",Menlo,monospace; color:#d9f1ff; }
+.pause-btns { margin-top:26px; display:flex; flex-direction:column; gap:10px; }
+.pause-btns button { pointer-events:auto; font-family:inherit; font-size:14px; letter-spacing:4px; color:#bfe8ff;
+  background:rgba(20,32,48,.55); border:1px solid rgba(120,200,255,.22); border-radius:8px;
+  padding:11px 0; cursor:pointer; transition:all .15s; }
+.pause-btns button:hover { border-color:rgba(140,220,255,.6); box-shadow:0 0 14px rgba(120,210,255,.25); }
+`;
+
+const HINTS = [
+  { t: 4.2, text: 'WASD 移动 · 鼠标环视房间' },
+  { t: 5.2, text: '按住 SHIFT 奔跑 — 更快,但脚步声更响,地图上会留下轨迹' },
+  { t: 5.6, text: '瞄准巨幕上的位置,左键开火 — 子弹落在对面房间的同一位置' },
+  { t: 5.6, text: '右键发射侦测器 — 区域内有人会被锁定;但敌方也会看到脉冲' },
+  { t: 4.6, text: '三枪命中即可击败目标 · 停下脚步,听 — 声音会穿过墙壁' },
+];
+
+const HUD = {
+  init(main) {
+    this.main = main;
+    const style = document.createElement('style');
+    style.textContent = CSS_TEXT;
+    document.head.appendChild(style);
+    this.root = document.getElementById('ui');
+    this.root.innerHTML = `
+      <div id="hud" class="hidden">
+      <div class="hud-top">
+        <div class="timer" id="timer">2:00</div>
+        <div class="msg" id="msg"></div>
+      </div>
+      <div class="hp"><div class="hp-label">生命</div><div class="hp-segs" id="hpsegs"></div></div>
+      <div class="scan" id="scanbox"><div class="scan-ring" id="scanring"><span id="scanicon">◈</span></div><div class="scan-label" id="scanlabel">侦测</div></div>
+      <div class="hint hidden" id="hint"></div>
+      <div class="count hidden" id="count"></div>
+      <div class="toast" id="toast"></div>
+      </div>
+
+      <div class="panel-layer hidden" id="menulayer">
+        <div class="panel">
+          <div class="title">对影</div>
+          <div class="subtitle">MIRRORROOM · 隔墙对局</div>
+          <div class="pitch">巨幕里是<b>对方的房间</b>。你看不见他 —<br>只能看见他留下的<b>光影痕迹</b>与<b>脚步声</b>。<br>朝屏幕开火,子弹会落在对面房间的同一位置。</div>
+          <div class="diff" id="diffsel">
+            <button data-d="easy">简单</button>
+            <button data-d="normal" class="on">标准</button>
+            <button data-d="hard">困难</button>
+          </div>
+          <div><button class="big" id="startbtn">开始对局</button></div>
+          <div class="controls">
+            <div class="ctl"><b>WASD</b>移动</div>
+            <div class="ctl"><b>SHIFT</b>奔跑·会暴露</div>
+            <div class="ctl"><b>左键</b>向巨幕射击</div>
+            <div class="ctl"><b>右键</b>侦测扫描</div>
+            <div class="ctl"><b>ESC</b>暂停</div>
+          </div>
+          <div class="foot">回合 120 秒 · 三枪定胜负 · 完全离线 · 素材全部由代码生成</div>
+        </div>
+      </div>
+
+      <div class="panel-layer hidden" id="endlayer">
+        <div class="panel">
+          <div class="end-title" id="endtitle">胜利</div>
+          <div class="end-reason" id="endreason"></div>
+          <div class="stats" id="endstats"></div>
+          <div class="end-btns">
+            <button class="btn-pri" id="rematch">再来一局</button>
+            <button class="btn-sec" id="tomenu">回到标题</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-layer hidden" id="pauselayer">
+        <div class="panel">
+          <div class="pause-title">暂停</div>
+          <div class="sliders">
+            <div class="slider"><span>灵敏度</span><input type="range" id="sens" min="0.4" max="2" step="0.05" value="1"><em id="sensv">1.00</em></div>
+            <div class="slider"><span>音量</span><input type="range" id="vol" min="0" max="1" step="0.05" value="0.9"><em id="volv">90%</em></div>
+          </div>
+          <div class="pause-btns">
+            <button id="resume">继续对局</button>
+            <button id="restart">重新开始</button>
+            <button id="quit">回到标题</button>
+          </div>
+        </div>
+      </div>`;
+    this.$ = id => document.getElementById(id);
+
+    const hpsegs = this.$('hpsegs');
+    hpsegs.innerHTML = '<div class="hp-seg"><i style="transform:scaleX(1)"></i></div>'.repeat(3);
+
+    /* 事件绑定 */
+    this.$('startbtn').addEventListener('click', () => {
+      AudioSys.init();
+      AudioSys.click();
+      main.startMatch(main.diffKey);
+    });
+    this.$('diffsel').addEventListener('click', e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      AudioSys.init(); AudioSys.click();
+      main.diffKey = b.dataset.d;
+      this.$('diffsel').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    });
+    this.$('rematch').addEventListener('click', () => { AudioSys.click(); main.startMatch(main.diffKey); });
+    this.$('tomenu').addEventListener('click', () => { AudioSys.click(); main.toMenu(); });
+    this.$('resume').addEventListener('click', () => { AudioSys.click(); main.resume(); });
+    this.$('restart').addEventListener('click', () => { AudioSys.click(); main.startMatch(main.diffKey); });
+    this.$('quit').addEventListener('click', () => { AudioSys.click(); main.toMenu(); });
+    this.$('sens').addEventListener('input', e => {
+      main.sens = parseFloat(e.target.value);
+      this.$('sensv').textContent = main.sens.toFixed(2);
+    });
+    this.$('vol').addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      AudioSys.muted = false;
+      AudioSys.setVolume(v);
+      this.$('volv').textContent = Math.round(v * 100) + '%';
+    });
+  },
+
+  showMenu() {
+    this.$('menulayer').classList.remove('hidden');
+    this.$('endlayer').classList.add('hidden');
+    this.$('pauselayer').classList.add('hidden');
+  },
+  hideAll() {
+    this.$('menulayer').classList.add('hidden');
+    this.$('endlayer').classList.add('hidden');
+    this.$('pauselayer').classList.add('hidden');
+  },
+  showEnd(match) {
+    const t = this.$('endtitle');
+    const w = match.winner;
+    t.className = 'end-title ' + (w === 'player' ? 'win' : w === 'enemy' ? 'lose' : 'draw');
+    t.textContent = w === 'player' ? '胜 利' : w === 'enemy' ? '失 败' : '平 局';
+    const r = this.$('endreason');
+    if (match.endReason === 'kill') r.textContent = w === 'player' ? '目标被消灭' : '你被消灭了';
+    else r.textContent = w === 'draw' ? '时间到 · 生命值相同' : '时间到 · 生命值' + (w === 'player' ? '领先' : '落后');
+    const s = match.stats;
+    const used = C.ROUND_T - Math.max(0, match.timeLeft);
+    this.$('endstats').innerHTML = `
+      <div class="stat"><span>射击次数</span><b>${s.pShots}</b></div>
+      <div class="stat"><span>命中 / 命中率</span><b>${s.pHits} / ${match.accuracy('p')}%</b></div>
+      <div class="stat"><span>敌方命中</span><b>${s.eHits}</b></div>
+      <div class="stat"><span>侦测 / 锁定</span><b>${s.pScans} / ${s.pFound}</b></div>
+      <div class="stat"><span>剩余生命</span><b>${match.player.hp}</b></div>
+      <div class="stat"><span>对局用时</span><b>${fmtTime(used)}</b></div>`;
+    this.$('endlayer').classList.remove('hidden');
+  },
+  showPause() {
+    this.$('pauselayer').classList.remove('hidden');
+  },
+  hidePause() {
+    this.$('pauselayer').classList.add('hidden');
+  },
+
+  setHint(text) {
+    const h = this.$('hint');
+    h.textContent = text;
+    h.classList.remove('hidden');
+  },
+  hideHint() {
+    this.$('hint').classList.add('hidden');
+  },
+  toast(text, ms) {
+    const t = this.$('toast');
+    t.textContent = text;
+    t.style.opacity = 1;
+    clearTimeout(this._tt);
+    this._tt = setTimeout(() => { t.style.opacity = 0; }, ms || 1000);
+  },
+
+  update(match) {
+    const show = match && (match.state === 'play' || match.state === 'ending' || match.state === 'countdown');
+    this.$('hud').classList.toggle('hidden', !show);
+    this.$('timer').textContent = fmtTime(match ? match.timeLeft : 0);
+    this.$('timer').classList.toggle('urgent', show && match.timeLeft <= 30);
+    /* 生命 */
+    const hp = match ? match.player.hp : 100;
+    const segs = this.$('hpsegs').children;
+    for (let i = 0; i < 3; i++) {
+      const f = clamp((hp - i * 33.4) / 33.4, 0, 1);
+      segs[i].querySelector('i').style.transform = 'scaleX(' + f.toFixed(3) + ')';
+      segs[i].classList.toggle('low', f > 0 && i === 2);
+    }
+    /* 侦测冷却 */
+    const scan = this.$('scanbox');
+    if (match) {
+      const p = 1 - clamp(match.player.scanCd / C.SCAN_CD, 0, 1);
+      this.$('scanring').style.background = 'conic-gradient(rgba(120,230,255,.85) ' + (p * 360).toFixed(0) + 'deg, rgba(120,230,255,.1) 0deg)';
+      scan.classList.toggle('ready', match.player.scanCd <= 0 && !match.player.scanActive);
+      this.$('scanlabel').textContent = match.player.scanActive ? '侦测中' : (match.player.scanCd <= 0 ? '就绪' : '冷却');
+    }
+    /* 消息 */
+    const m = this.$('msg');
+    if (match && match.hudMsg) {
+      m.textContent = match.hudMsg.text;
+      m.style.color = match.hudMsg.color;
+      m.style.opacity = Math.min(1, match.hudMsgT * 3 + 0.3);
+    } else m.textContent = '';
+    /* 倒计时数字 */
+    const c = this.$('count');
+    if (match && match.state === 'countdown') {
+      c.classList.remove('hidden');
+      c.textContent = Math.max(1, Math.ceil(match.countT));
+    } else c.classList.add('hidden');
+  },
+};
+
+/* ===== 80-main.js ===== */
+'use strict';
+/* ================= 主程序:启动 / 输入 / 循环 ================= */
+
+const Main = {
+  state: 'menu',          // menu | playing | paused | ended | spectate
+  diffKey: 'normal',
+  sens: 1,
+  paused: false,
+  canvas: null, renderer: null, match: null, attract: null,
+  keys: {}, locked: false,
+  bob: 0, sway: 0, swayT: 0, swayX: 0,
+  emaMs: 16.6, lastT: 0,
+  hintI: -1, hintT: 0, hintsDone: false,
+  hbT: 0, endDelayT: 0,
+  attractCamYaw: 0,
+  spectate: false, skipT: 0,
+
+  boot() {
+    this.canvas = document.getElementById('game');
+    this.renderer = new Renderer(this.canvas);
+    HUD.init(this);
+
+    const params = new URLSearchParams(location.search);
+    this.spectate = params.get('spectate') === '1';
+    const skip = parseFloat(params.get('skip') || '0');
+
+    window.addEventListener('resize', () => this.doResize());
+    this.doResize();
+
+    /* 输入 */
+    window.addEventListener('keydown', e => this.onKey(e, true));
+    window.addEventListener('keyup', e => this.onKey(e, false));
+    document.addEventListener('mousemove', e => {
+      if (!this.locked) return;
+      this.swayX += e.movementX;
+      const k = 0.0022 * this.sens;
+      const p = this.match && this.match.player ? this.match.player : null;
+      if (p) {
+        p.yaw -= e.movementX * k;
+        p.pitch = clamp(p.pitch - e.movementY * k, -1.45, 1.45);
+      }
+    });
+    this.canvas.addEventListener('mousedown', e => {
+      if (!this.locked || this.state !== 'playing') return;
+      const m = this.match;
+      if (e.button === 0) {
+        const r = m.playerFire();
+        if (r === 'offscreen') HUD.toast('瞄准巨幕才能开火', 900);
+      } else if (e.button === 2) {
+        const r = m.playerScan();
+        if (r === 'offscreen') HUD.toast('瞄准巨幕才能侦测', 900);
+      }
+    });
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('pointerlockchange', () => {
+      this.locked = document.pointerLockElement === this.canvas;
+      if (this.state === 'playing') {
+        if (!this.locked && !this.paused) this.pauseGame();
+        else if (this.locked && this.paused) this.resume();
+      }
+    });
+
+    /* 菜单演示(幕后 AI 对战) */
+    this.attract = new Match(this.diffKey);
+    this.attract.obs = new Brain(this.diffKey);
+
+    if (params.get('selfcheck') === '1') {
+      this.selfCheck(parseFloat(params.get('skip') || '0'));
+      return;
+    }
+    if (params.get('probe') === '1') {
+      this.probe();
+      return;
+    }
+
+    if (this.spectate) {
+      this.match = new Match(this.diffKey);
+      this.match.obs = new Brain(this.diffKey);
+      this.state = 'spectate';
+      HUD.hideAll();
+      if (skip > 0) {
+        const n = Math.floor(skip * 60);
+        for (let i = 0; i < n; i++) this.match.step(1 / 60);
+      }
+    } else {
+      HUD.showMenu();
+    }
+
+    requestAnimationFrame(t => this.loop(t));
+  },
+
+  /* ---------- 无头自检:渲染若干帧后采样画布像素,报告区域统计 ---------- */
+  selfCheck(skip) {
+    this.match = new Match(this.diffKey);
+    this.match.obs = new Brain(this.diffKey);
+    this.state = 'spectate';
+    HUD.hideAll();
+    if (skip > 0) {
+      const n = Math.floor(skip * 60);
+      for (let i = 0; i < n; i++) this.match.step(1 / 60);
+    }
+    let frames = 0;
+    let acc = 0;
+    const t0 = performance.now();
+    const probe = () => {
+      frames++;
+      this.match.step(1 / 60);
+      if (this.match.state === 'end') {
+        this.match = new Match(this.diffKey);
+        this.match.obs = new Brain(this.diffKey);
+      }
+      const st = this.buildState(this.match);
+      const r0 = performance.now();
+      this.renderer.render(st);
+      acc += performance.now() - r0;
+      HUD.update(this.match);
+      if (frames < 80) { requestAnimationFrame(probe); return; }
+      /* 采样 */
+      const ctx = this.renderer.ctx, W = this.renderer.W, H = this.renderer.H;
+      const img = ctx.getImageData(0, 0, W, H).data;
+      let total = [0, 0, 0], black = 0, blue = 0, n = img.length / 4;
+      for (let i = 0; i < img.length; i += 4) {
+        const r = img[i], g = img[i + 1], b = img[i + 2];
+        total[0] += r; total[1] += g; total[2] += b;
+        if (r + g + b < 24) black++;
+        if (b > r + 20 && b > 90) blue++;
+      }
+      const mean = [total[0] / n, total[1] / n, total[2] / n].map(v => v.toFixed(0));
+      /* 6×4 区域均值 */
+      let grid = [];
+      for (let ry = 0; ry < 4; ry++) {
+        let row = [];
+        for (let rx = 0; rx < 6; rx++) {
+          let s = [0, 0, 0], c = 0;
+          for (let y = Math.floor(ry * H / 4); y < Math.floor((ry + 1) * H / 4); y += 4)
+            for (let x = Math.floor(rx * W / 6); x < Math.floor((rx + 1) * W / 6); x += 4) {
+              const i = (y * W + x) * 4;
+              s[0] += img[i]; s[1] += img[i + 1]; s[2] += img[i + 2]; c++;
+            }
+          row.push(s.map(v => Math.round(v / c)).join(','));
+        }
+        grid.push(row.join(' | '));
+      }
+      const report = {
+        state: this.match.state, timeLeft: Math.round(this.match.timeLeft),
+        renderMs: (acc / frames).toFixed(1),
+        fps: (frames / ((performance.now() - t0) / 1000)).toFixed(1),
+        meanRGB: mean.join(','),
+        blackPct: (black / n * 100).toFixed(1),
+        bluePct: (blue / n * 100).toFixed(1),
+        pShots: this.match.stats.pShots, eShots: this.match.stats.eShots,
+        pHits: this.match.stats.pHits, eHits: this.match.stats.eHits,
+        grid,
+      };
+      const pre = document.createElement('pre');
+      pre.id = 'selfcheck';
+      pre.textContent = JSON.stringify(report, null, 1);
+      document.body.appendChild(pre);
+      document.title = 'SELFCHECK ' + report.fps + 'fps ' + report.renderMs + 'ms ' + report.meanRGB;
+      console.log('SELFCHECK_REPORT ' + JSON.stringify(report));
+    };
+    requestAnimationFrame(probe);
+  },
+
+  /* ---------- 无头探针:固定相机采样已知像素,验证投影与巨幕映射 ---------- */
+  probe() {
+    const R = this.renderer;
+    const out = {};
+    const px = (ctx, fx, fy) => {
+      const d = ctx.getImageData(Math.floor(fx * ctx.canvas.width), Math.floor(fy * ctx.canvas.height), 1, 1).data;
+      return d[0] + ',' + d[1] + ',' + d[2];
+    };
+    const sample = (m, camX, camY, camZ, yaw, pitch) => {
+      m.player.x = camX; m.player.z = camZ; m.player.yaw = yaw; m.player.pitch = pitch;
+      m.aim.valid = false;
+      R.render(this.buildState(m));
+      const ctx = R.ctx;
+      return {
+        c: px(ctx, 0.5, 0.5),
+        t20: px(ctx, 0.5, 0.2),
+        t35: px(ctx, 0.5, 0.35),
+        b60: px(ctx, 0.5, 0.6),
+        b75: px(ctx, 0.5, 0.75),
+        l05: px(ctx, 0.05, 0.5),
+        r95: px(ctx, 0.95, 0.5),
+        l25: px(ctx, 0.25, 0.4),
+        r75: px(ctx, 0.75, 0.4),
+      };
+    };
+    const m = new Match(this.diffKey);
+    m.obs = null;
+    out.faceScreen = sample(m, 0, C.EYE, 13.5, 0, 0);
+    out.faceBack = sample(m, 0, C.EYE, 1.5, Math.PI, 0);
+    /* 近距:相机在 (0,1.7,4) 正对巨幕,中心应映射到 v=(1.7-0.4)/6 → mapCv(480, 83) */
+    out.closeScreen = sample(m, 0, C.EYE, 4, 0, 0);
+    out.mapV0217 = px(R.map, 0.5, 0.2167);
+    out.mapV05 = px(R.map, 0.5, 0.5);
+    out.mapWall = px(R.map, 0.02, 0.5);
+    /* 巨幕覆盖检测:第 40% 行上"蓝色系"像素占比 */
+    m.player.x = 0; m.player.z = 4; m.player.yaw = 0; m.player.pitch = 0;
+    m.aim.valid = false;
+    R.render(this.buildState(m));
+    const img = R.ctx.getImageData(0, Math.floor(R.H * 0.4), R.W, 1).data;
+    let bluish = 0;
+    for (let i = 0; i < img.length; i += 4)
+      if (img[i + 2] > img[i] + 4) bluish++;
+    out.screenRow40BluePct = (bluish / R.W * 100).toFixed(1);
+    /* 枪械可见性:右下角区域里"枪身灰"(r 15-70 且 b>r)像素计数 */
+    const gi = R.ctx.getImageData(Math.floor(R.W * 0.5), Math.floor(R.H * 0.94), Math.floor(R.W * 0.32), Math.floor(R.H * 0.06)).data;
+    let gunPx = 0;
+    for (let i = 0; i < gi.length; i += 4)
+      if (gi[i] > 15 && gi[i] < 70 && gi[i + 2] > gi[i] + 4) gunPx++;
+    out.gunPixels = gunPx;
+    const pre = document.createElement('pre');
+    pre.id = 'probe';
+    pre.textContent = JSON.stringify(out, null, 1);
+    document.body.appendChild(pre);
+    document.title = 'PROBE ' + out.screenRow40BluePct + '% gun=' + out.gunPixels;
+    console.log('PROBE_REPORT ' + JSON.stringify(out));
+  },
+
+  doResize() {
+    if (!this.renderer) return;
+    this.renderer.scale = this.adaptScale();
+    this.renderer.resize(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1);
+  },
+
+  adaptScale() { return this.renderer ? this.renderer.scale : 1; },
+
+  onKey(e, down) {
+    if (e.code === 'KeyM' && down) {
+      const muted = AudioSys.toggleMute();
+      HUD.toast(muted ? '已静音' : '已开启声音', 800);
+      return;
+    }
+    this.keys[e.code] = down;
+    if (down && e.code === 'Enter' && this.state === 'ended') {
+      this.startMatch(this.diffKey);
+    }
+  },
+
+  /* ---------- 流程控制 ---------- */
+  startMatch(diffKey) {
+    this.diffKey = diffKey;
+    this.match = new Match(diffKey);
+    this.state = 'playing';
+    this.paused = false;
+    this.hintI = -1; this.hintT = 0;
+    this.endDelayT = 0;
+    HUD.hideAll();
+    this.requestLock();
+  },
+
+  requestLock() {
+    try {
+      const p = this.canvas.requestPointerLock();
+      if (p && p.catch) p.catch(() => {});
+    } catch (e) {}
+  },
+
+  pauseGame() {
+    this.paused = true;
+    HUD.showPause();
+  },
+
+  resume() {
+    this.paused = false;
+    HUD.hidePause();
+    this.requestLock();
+  },
+
+  toMenu() {
+    this.state = 'menu';
+    this.paused = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+    HUD.showMenu();
+    if (!this.attract || this.attract.state === 'end') {
+      this.attract = new Match(this.diffKey);
+      this.attract.obs = new Brain(this.diffKey);
+    }
+  },
+
+  /* ---------- 玩家输入 → 世界坐标 ---------- */
+  readInput(p) {
+    const k = this.keys;
+    const fwd = { x: Math.sin(p.yaw), z: -Math.cos(p.yaw) };
+    const right = { x: Math.cos(p.yaw), z: Math.sin(p.yaw) };
+    const wx = (k['KeyD'] ? 1 : 0) - (k['KeyA'] ? 1 : 0);
+    const wz = (k['KeyS'] ? 1 : 0) - (k['KeyW'] ? 1 : 0);
+    let mx = right.x * wx + fwd.x * wz;
+    let mz = right.z * wx + fwd.z * wz;
+    const L = Math.hypot(mx, mz);
+    if (L > 1) { mx /= L; mz /= L; }
+    const inp = this.match.playerInput;
+    inp.mx = mx; inp.mz = mz; inp.run = !!k['ShiftLeft'] || !!k['ShiftRight'];
+  },
+
+  /* ---------- 瞄准投影 ---------- */
+  computeAim(p) {
+    const cp = Math.cos(p.pitch);
+    const dx = Math.sin(p.yaw) * cp, dy = Math.sin(p.pitch), dz = -Math.cos(p.yaw) * cp;
+    const a = this.match.aim;
+    if (dz >= -0.02) { a.valid = false; return; }
+    const t = -p.z / dz;
+    if (t <= 0.1) { a.valid = false; return; }
+    const x = p.x + dx * t, y = C.EYE + dy * t;
+    if (x < -8 || x > 8 || y < C.SCREEN_Y0 || y > C.SCREEN_H) { a.valid = false; return; }
+    a.valid = true;
+    a.u = (x + 8) / 16;
+    a.v = (y - C.SCREEN_Y0) / (C.SCREEN_H - C.SCREEN_Y0);
+    a.mx = x;
+    a.mz = a.v * 15;
+    /* 朝向音量 */
+    AudioSys.setScreenFacing(Math.max(0, -dz));
+  },
+
+  /* ---------- 渲染状态打包 ---------- */
+  buildState(m, camOverride) {
+    const p = m.player;
+    const shake = m.shake;
+    const jx = shake > 0 ? (Math.random() - 0.5) * 0.03 * shake : 0;
+    const jy = shake > 0 ? (Math.random() - 0.5) * 0.03 * shake : 0;
+    const cam = camOverride || {
+      x: p.x, y: C.EYE, z: p.z,
+      yaw: p.yaw + jx, pitch: p.pitch + jy,
+    };
+    return {
+      dt: 1 / 60,
+      cam,
+      aim: m.aim,
+      mapEvents: m.eventsB,
+      feed: m.feed,
+      fx3d: m.fx3d,
+      state: m.state,
+      countT: m.countT,
+      timeLeft: m.timeLeft,
+      globalSweepT: m.globalSweepT,
+      edgeFlash: m.edgeFlash,
+      redFlash: m.redFlash,
+      confirmFlash: m.confirmFlash,
+      lastHitAt: m.lastHitAt,
+      player: {
+        gunCd: p.gunCd, scanCd: p.scanCd, recoil: p.recoil, hp: p.hp,
+        scanReady: p.scanCd <= 0 && !p.scanActive,
+      },
+      bob: this.bob, sway: this.swayX * 0.01,
+    };
+  },
+
+  /* ---------- 提示 ---------- */
+  updateHints(dt) {
+    if (this.hintsDone) return;
+    if (this.hintI < 0) {
+      this.hintI = 0;
+      this.hintT = HINTS[0].t;
+      HUD.setHint(HINTS[0].text);
+      return;
+    }
+    this.hintT -= dt;
+    if (this.hintT <= 0) {
+      this.hintI++;
+      if (this.hintI >= HINTS.length) { this.hintsDone = true; HUD.hideHint(); return; }
+      this.hintT = HINTS[this.hintI].t;
+      HUD.setHint(HINTS[this.hintI].text);
+    }
+  },
+
+  /* ---------- 主循环 ---------- */
+  loop(now) {
+    requestAnimationFrame(t => this.loop(t));
+    const dt = clamp((now - this.lastT) / 1000, 0, 0.05);
+    this.lastT = now;
+    this.emaMs = this.emaMs * 0.95 + Math.min(dt * 1000, 100) * 0.05;
+    /* 自适应分辨率 */
+    const target = this.adaptScale();
+    if (this.emaMs > 30 && target > 0.55) this.renderer.scale = target - 0.07;
+    else if (this.emaMs < 14 && target < 1.2) this.renderer.scale = target + 0.03;
+    if (Math.abs(this.renderer.scale - target) > 0.001) this.doResize();
+
+    let m = null;
+    if (this.state === 'menu') {
+      m = this.attract;
+      m.step(dt);
+      if (m.state === 'end') {
+        this.attract = new Match(this.diffKey);
+        this.attract.obs = new Brain(this.diffKey);
+        m = this.attract;
+      }
+    } else if (this.state === 'playing' || this.state === 'spectate') {
+      m = this.match;
+      if (this.state === 'playing') {
+        this.readInput(m.player);
+        this.computeAim(m.player);
+        this.updateHints(dt);
+        /* 心跳 */
+        if (m.state === 'play') {
+          const hp = m.player.hp;
+          const rate = hp <= 32 ? 0.85 : (hp <= 66 ? 1.5 : 0);
+          const urgent = m.timeLeft <= 30 ? 0.8 : 0;
+          if (rate > 0 || urgent > 0) {
+            this.hbT -= dt;
+            if (this.hbT <= 0) {
+              AudioSys.heartbeat(rate > 0 ? 1 : 0.5);
+              this.hbT = Math.min(rate || 99, urgent || 99);
+            }
+          }
+        }
+      }
+      if (!this.paused) m.step(dt);
+      if (m.state === 'end') {
+        if (this.state === 'spectate') {
+          this.match = new Match(this.diffKey);
+          this.match.obs = new Brain(this.diffKey);
+        } else {
+          this.state = 'ended';
+          document.exitPointerLock && document.exitPointerLock();
+          HUD.showEnd(m);
+        }
+      }
+      if (m === this.match && this.state === 'playing') this.bob += dt * (m.player.moving ? (m.player.run ? 9 : 6) : 0);
+      this.swayX *= Math.pow(0.001, dt);
+    } else if (this.state === 'ended') {
+      m = this.match;
+    }
+
+    if (!m) return;
+
+    /* 相机(菜单演示:缓慢环绕) */
+    let camOverride = null;
+    if (this.state === 'menu') {
+      this.attractCamYaw += dt * 0.1;
+      const p = m.player;
+      camOverride = {
+        x: p.x, y: C.EYE, z: p.z,
+        yaw: Math.sin(this.attractCamYaw) * 0.55,
+        pitch: -0.06 + Math.sin(this.attractCamYaw * 0.7) * 0.07,
+      };
+      m.aim.valid = false;
+    }
+    const st = this.buildState(m, camOverride);
+    st.dt = dt;
+    this.renderer.render(st);
+
+    if (this.state !== 'menu' && this.state !== 'ended') HUD.update(m);
+  },
+};
+
+/* ---------- 测试/模拟钩子 ---------- */
+if (typeof window !== 'undefined') {
+  window.__G = {
+    C, DIFF, Match, Brain, MapGrid, Heatmap,
+    newSim(diffKey, seed) {
+      const d = diffKey || 'normal';
+      const m = new Match(d);
+      m.fixedSeed = seed === undefined ? 1 : seed;
+      m.reset();
+      m.obs = new Brain(d);
+      return m;
+    },
+    stepSim(m, dt) { m.step(dt); },
+    simStats(m) {
+      return {
+        state: m.state, winner: m.winner, timeLeft: m.timeLeft,
+        pShots: m.stats.pShots, pHits: m.stats.pHits,
+        eShots: m.stats.eShots, eHits: m.stats.eHits,
+        pScans: m.stats.pScans, pFound: m.stats.pFound,
+        eScans: m.stats.eScans, eFound: m.stats.eFound,
+        php: m.player.hp, ehp: m.enemy.hp,
+      };
+    },
+  };
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', () => Main.boot());
+}
+
+</script>
+</body>
+</html>
