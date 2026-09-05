@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="UTFoCwVyh7SDNBlJIOz9eq">
+<head data-page-node-id="8tkzGbGITuKPSBFV4H29gH">
+<meta charset="UTF-8" data-page-node-id="0YbFTaRiUBhpRcSvCr6md6">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="xgL4z6Bj5XTLXVUCBJtFlJ">
+<title>对屏 · OTHERSIDE</title>
+<style>
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#04060a;
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,sans-serif;
+    -webkit-user-select:none;user-select:none;}
+  #game{position:absolute;inset:0;display:block;cursor:crosshair;}
+  .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 40%, rgba(10,22,38,.92), rgba(3,5,9,.97));
+    color:#cfe7f5;z-index:10;transition:opacity .35s;}
+  .hidden{opacity:0;pointer-events:none;}
+  .title{font-size:56px;letter-spacing:14px;font-weight:200;color:#e8f6ff;margin:0 0 6px 0;
+    text-shadow:0 0 30px rgba(64,200,255,.55);}
+  .title b{font-weight:600;color:#54d8ff;}
+  .subtitle{font-size:13px;letter-spacing:6px;color:#5f87a0;margin-bottom:38px;}
+  .brief{max-width:560px;text-align:center;font-size:14px;line-height:2.1;color:#9fc2d4;margin-bottom:34px;}
+  .brief em{color:#54d8ff;font-style:normal;}
+  .brief .warn{color:#ff7d6b;}
+  .keys{display:flex;gap:26px;margin-bottom:40px;flex-wrap:wrap;justify-content:center;}
+  .key{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:12px;color:#7fa3b8;}
+  .key span{display:inline-block;padding:6px 14px;border:1px solid #2c4a5e;border-radius:6px;background:#0b1622;
+    color:#bfe6ff;font-family:monospace;font-size:13px;box-shadow:0 0 12px rgba(64,200,255,.12) inset;}
+  .btn{padding:14px 58px;font-size:16px;letter-spacing:8px;color:#04121c;background:linear-gradient(180deg,#6fe3ff,#2fb7e8);
+    border:none;border-radius:4px;cursor:pointer;font-weight:600;box-shadow:0 0 26px rgba(64,200,255,.45);}
+  .btn:hover{filter:brightness(1.12);}
+  .result{font-size:64px;letter-spacing:20px;font-weight:200;margin-bottom:10px;}
+  .win{color:#6fe3ff;text-shadow:0 0 40px rgba(64,220,255,.7);}
+  .lose{color:#ff6b5e;text-shadow:0 0 40px rgba(255,90,80,.6);}
+  .draw{color:#ffd47e;text-shadow:0 0 40px rgba(255,200,110,.6);}
+  .stats{font-size:14px;color:#8fb4c8;line-height:2.2;text-align:center;margin-bottom:36px;font-family:monospace;}
+  .stats b{color:#d8f2ff;}
+  .foot{position:absolute;bottom:26px;font-size:11px;letter-spacing:3px;color:#3d5a6e;}
+</style>
+</head>
+<body data-page-node-id="DyCHAnOj2vgl4WsS8QmuBa">
+<canvas id="game" data-page-node-id="p10hMwANY988axaOMHAKLw"></canvas>
+
+<div id="menu" class="overlay" data-page-node-id="bGT3YlKDp1b9FSwGcWhHzu">
+  <div class="title" data-page-node-id="HvQstxNR9Sz3PoQY6h1mi0">对<b data-page-node-id="MLOjVpGoIUjvHaR0HBPhJd">屏</b> · OTHERSIDE</div>
+  <div class="subtitle" data-page-node-id="qBsZHc7PZQx0Mx1g8TSABy">BLIND DUEL PROTOCOL // 盲 射 博 弈</div>
+  <div class="brief" data-page-node-id="AdtTiotGcpBrQriO9teZsj">
+    你和对<b data-page-node-id="nqbVOLGamBTWsNOscKQPrW">手</b>各自被关在一模一样的房间里,互相看不见对方。<br data-page-node-id="XWghn6HTCpuWIU3uhml7Io">
+    面前的巨幕是<em data-page-node-id="DKqQaJkTNI5KFDsVPjUGTh">对面房间的实时地图</em>——瞄准地图开火,子弹会落在对面对应的位置。<br data-page-node-id="1SKqkUC3o8voNsufKvUyKG">
+    地图上没有人影,只有<em data-page-node-id="WE4OW7Cz7IUucFV22WMeuQ">偶尔闪过的痕迹</em>:光影、拖尾、开火时的暴露。<br data-page-node-id="bSpPRzMkyZ8YgM3LSrKRf1">
+    <span class="warn" data-page-node-id="2irdWWaro61MBQ9lz2iiNQ">注意:你每一次开火,也会把自己的位置暴露给对方。</span><br data-page-node-id="u9PCjTOvuVfSIfl9C1EXjP">
+    120 秒。击倒对方,或者活得更久。
+  </div>
+  <div class="keys" data-page-node-id="uZMbGcAzr2oFYn4w5Hxtyt">
+    <div class="key" data-page-node-id="Q63L46NGBaBHAKUDomXfnz"><span data-page-node-id="fsm5Cd9CpsO8iU8yDlDWVd">W A S D</span>移动</div>
+    <div class="key" data-page-node-id="Zs3sYCd73IBLuimEaDhFAK"><span data-page-node-id="GGwRYxgHV9V53Zq7cby8Z2">鼠标</span>视角 / 瞄准巨幕</div>
+    <div class="key" data-page-node-id="7h80uPA9hqGBr5UOYAeSOD"><span data-page-node-id="XnQQOvSRvOwROyp6IqqrjG">左键</span>开火(会暴露自己)</div>
+    <div class="key" data-page-node-id="UbR3hxBzwJX2OpEMZbFAdQ"><span data-page-node-id="NqIQE9jgnRDqa39FW5YeIv">Q</span>探测器 × 3</div>
+    <div class="key" data-page-node-id="SDTPXrD3U1Gn1YkgYDYU42"><span data-page-node-id="vxHEDEbgUEkhJYWWPCca1I">Shift</span>冲刺(会留痕迹)</div>
+  </div>
+  <button class="btn" id="startBtn" data-page-node-id="vXCAnF1gKWRr6WjPGfj5pq">进 入 猎 场</button>
+  <div class="foot" data-page-node-id="vcXlmLColF2tNQHhQWB5Y1">HEADPHONES RECOMMENDED // 建议使用耳机</div>
+</div>
+
+<div id="pause" class="overlay hidden" data-page-node-id="mo0Qogg7IV3Xe5OvRPFrSC">
+  <div class="title" style="font-size:34px;letter-spacing:8px;" data-page-node-id="XHnzg5C5rgDETx6YmNEcsK">已 暂 停</div>
+  <div class="brief" data-page-node-id="aH625Ur8byB93EADM1FC9H">点击任意处返回猎场</div>
+</div>
+
+<div id="end" class="overlay hidden" data-page-node-id="EpJ6etaeBwagfIQKbGA66b">
+  <div class="result" id="endTitle" data-page-node-id="DootRFPUNWKEpevoHRRZVy">胜 利</div>
+  <div class="stats" id="endStats" data-page-node-id="SkzND2xAndE0cCOXDq3q9E"></div>
+  <button class="btn" id="againBtn" data-page-node-id="Ls484U15FwmDGhIiKLJg9X">再 来 一 局</button>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   对屏 · OTHERSIDE —— 一场发生在两个房间之间的盲射博弈
+   纯 Canvas 光线投射引擎,无外部资源,可离线运行
+   ============================================================ */
+
+// ---------- 基础常量 ----------
+const ROOM_W = 16, ROOM_D = 15;            // 场地:16m 宽 × 15m 深
+const WALL_H = 5.0, EYE_Z = 1.7;
+const ROUND_TIME = 120;                    // 每回合 120 秒
+const FOV = 75 * Math.PI / 180;
+
+// 巨幕:北墙(y=0 墙体内侧面 y=1)上 x∈[2,14]、z∈[0.3,4.6]
+const SCR_X0 = 2, SCR_X1 = 14, SCR_Z0 = 0.3, SCR_Z1 = 4.6;
+const SCR_W = 1400, SCR_H = 430;           // 巨幕纹理分辨率
+// 地图区域(在巨幕纹理内,保持 16:15 比例,居中)
+const MAP_H = 414, MAP_W = 441, MAP_X = Math.round((SCR_W - MAP_W) / 2), MAP_Y = 8;
+const MSX = MAP_W / ROOM_W, MSY = MAP_H / ROOM_D;   // 米→像素
+
+const GRID = [
+  "################",
+  "#..............#",
+  "#..............#",
+  "#..............#",
+  "#...C......C...#",
+  "#..............#",
+  "#..............#",
+  "#......CC......#",
+  "#..............#",
+  "#..............#",
+  "#...C......C...#",
+  "#..............#",
+  "#..............#",
+  "#..............#",
+  "################"
+];
+function cellAt(x, y) {
+  if (x < 0 || y < 0 || x >= ROOM_W || y >= ROOM_D) return "#";
+  return GRID[y][x];
+}
+
+// ---------- 全局状态 ----------
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+let W = 0, H = 0, colW = 2, PROJ = 400;
+let ceilGrad = null, floorGrad = null;
+
+const G = {
+  state: "menu",            // menu | playing | paused | over
+  now: 0,
+  timeLeft: ROUND_TIME,
+  // 玩家
+  px: 8, py: 12.5, yaw: -Math.PI / 2, pitch: 0,
+  hp: 100, detectors: 3,
+  fireCd: 0, recoil: 0, bobPhase: 0, bobAmp: 0, moving: 0, sprinting: false,
+  // 对手(AI 在镜像房间中)
+  ai: null,
+  // 特效
+  hurtFlash: 0, missFlash: 0, muzzle: 0, shake: 0, heal: 0,
+  // 统计
+  shots: 0, hits: 0, dmgDealt: 0, dmgTaken: 0,
+  hintT: 0
+};
+let traces = [];      // 巨幕上的痕迹 {x,y,t,type}
+let impacts = [];     // 弹着点 {x,y,t,hit}
+let probes = [];      // 探测器 {x,y,landT,until,locked,lx,ly}
+let inFlight = [];    // 玩家子弹 {x,y,landT}
+let incoming = [];    // AI 子弹 {x,y,landT}
+let logs = [];        // 巨幕左侧面板日志 {txt,t,color}
+let msgs = [];        // 屏幕下方消息 {txt,t,color}
+let aim = { onMap: false, ex: 0, ey: 0 };
+
+const keys = {};
+let locked = false;
+
+// ---------- 画布尺寸 ----------
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  colW = Math.max(2, Math.ceil(W / 460));
+  PROJ = (W / 2) / Math.tan(FOV / 2);
+  ceilGrad = ctx.createLinearGradient(0, 0, 0, H / 2);
+  ceilGrad.addColorStop(0, "#0a0e14"); ceilGrad.addColorStop(1, "#141c26");
+  floorGrad = ctx.createLinearGradient(0, H / 2, 0, H);
+  floorGrad.addColorStop(0, "#10151d"); floorGrad.addColorStop(1, "#05070b");
+}
+window.addEventListener("resize", resize);
+resize();
+
+// ============================================================
+// 程序化纹理(全部代码绘制,无外部素材)
+// ============================================================
+function makeWallTex() {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d");
+  const grad = g.createLinearGradient(0, 0, 0, 128);
+  grad.addColorStop(0, "#3a4656"); grad.addColorStop(1, "#2b3542");
+  g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 2;
+  g.strokeRect(1, 1, 126, 126);
+  g.strokeStyle = "rgba(255,255,255,.05)";
+  g.beginPath(); g.moveTo(0, 64); g.lineTo(128, 64); g.stroke();
+  g.fillStyle = "rgba(120,200,255,.10)"; g.fillRect(0, 96, 128, 5);   // 墙裙光带
+  for (let i = 0; i < 60; i++) {
+    g.fillStyle = "rgba(255,255,255," + (Math.random() * .03) + ")";
+    g.fillRect(Math.random() * 128, Math.random() * 128, 2, 2);
+  }
+  return c;
+}
+function makeCrateTex() {
+  const c = document.createElement("canvas"); c.width = c.height = 128;
+  const g = c.getContext("2d");
+  const grad = g.createLinearGradient(0, 0, 128, 128);
+  grad.addColorStop(0, "#4a4038"); grad.addColorStop(1, "#332c26");
+  g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = "rgba(0,0,0,.5)"; g.lineWidth = 4; g.strokeRect(4, 4, 120, 120);
+  g.strokeStyle = "rgba(0,0,0,.3)"; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(4, 4); g.lineTo(124, 124); g.moveTo(124, 4); g.lineTo(4, 124); g.stroke();
+  g.fillStyle = "rgba(255,190,80,.18)";
+  for (let i = -2; i < 6; i++) g.fillRect(0, i * 26 + 8, 128, 7);
+  return c;
+}
+const wallTex = makeWallTex(), crateTex = makeCrateTex();
+// 巨幕扫描线图案
+const scanPat = (() => {
+  const c = document.createElement("canvas"); c.width = 4; c.height = 4;
+  const g = c.getContext("2d");
+  g.fillStyle = "rgba(0,0,0,.16)"; g.fillRect(0, 0, 4, 1);
+  return ctx.createPattern(c, "repeat");
+})();
+
+// 巨幕离屏画布
+const scr = document.createElement("canvas"); scr.width = SCR_W; scr.height = SCR_H;
+const sg = scr.getContext("2d");
+
+// ============================================================
+// 程序化音效(WebAudio 合成,无音频文件)
+// ============================================================
+let AC = null, master = null, ambient = null;
+function initAudio() {
+  if (AC) return;
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain(); master.gain.value = 0.5; master.connect(AC.destination);
+    // 环境低鸣
+    const len = AC.sampleRate * 2, buf = AC.createBuffer(1, len, AC.sampleRate);
+    const d = buf.getChannelData(0); let last = 0;
+    for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = last * 3; }
+    const src = AC.createBufferSource(); src.buffer = buf; src.loop = true;
+    const lp = AC.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 220;
+    const g = AC.createGain(); g.gain.value = 0.05;
+    src.connect(lp); lp.connect(g); g.connect(master); src.start();
+    ambient = g;
+  } catch (e) { AC = null; }
+}
+function beep(type, f0, f1, dur, vol, delay) {
+  if (!AC) return;
+  const t = AC.currentTime + (delay || 0);
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f0, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(1, f1), t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+}
+function noise(dur, vol, freq, delay) {
+  if (!AC) return;
+  const t = AC.currentTime + (delay || 0);
+  const len = Math.ceil(AC.sampleRate * dur), buf = AC.createBuffer(1, len, AC.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = AC.createBufferSource(); src.buffer = buf;
+  const f = AC.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = freq;
+  const g = AC.createGain(); g.gain.value = vol;
+  src.connect(f); f.connect(g); g.connect(master); src.start(t);
+}
+const sfx = {
+  shot()      { noise(0.10, 0.5, 3200); beep("square", 720, 130, 0.12, 0.30); },
+  hit()       { beep("sine", 880, 880, 0.06, 0.30); beep("sine", 1320, 1320, 0.09, 0.30, 0.07); },
+  enemyFire() { beep("sine", 210, 90, 0.30, 0.14); },
+  boom()      { noise(0.35, 0.6, 500); beep("sine", 130, 38, 0.42, 0.5); },
+  hurt()      { beep("sawtooth", 220, 55, 0.28, 0.4); noise(0.2, 0.3, 800); },
+  blip()      { beep("sine", 1250, 1100, 0.05, 0.05); },
+  ping()      { beep("sine", 600, 1700, 0.35, 0.22); },
+  lock()      { beep("square", 990, 990, 0.05, 0.15); beep("square", 990, 990, 0.05, 0.15, 0.09); },
+  empty()     { beep("sine", 300, 180, 0.2, 0.15); },
+  step(run)   { noise(0.05, run ? 0.10 : 0.06, 700); },
+  win()       { [523,659,784,1047].forEach((f,i)=>beep("sine",f,f,0.22,0.25,i*0.13)); },
+  lose()      { [392,330,262,196].forEach((f,i)=>beep("sine",f,f,0.28,0.25,i*0.15)); }
+};
+
+// ============================================================
+// AI 对手 —— 住在对面房间里的猎手
+// ============================================================
+function newAI() {
+  return {
+    x: 8, y: 3.2, hp: 100,
+    wx: 8, wy: 3.2,            // 当前路径点
+    speed: 2.6, sprintT: 0, evadeT: 0, evadeX: 0, evadeY: 0,
+    fireT: 3.5 + Math.random() * 2,
+    blobT: 2.0, streakT: 0,
+    info: null,                // 对玩家位置的认知 {x,y,t,q}
+    thinkT: 0
+  };
+}
+function aiCollide(nx, ny) {
+  const r = 0.35;
+  return cellAt(Math.floor(nx - r), Math.floor(ny)) === "." &&
+         cellAt(Math.floor(nx + r), Math.floor(ny)) === "." &&
+         cellAt(Math.floor(nx), Math.floor(ny - r)) === "." &&
+         cellAt(Math.floor(nx), Math.floor(ny + r)) === "." &&
+         cellAt(Math.floor(nx - r), Math.floor(ny - r)) === "." &&
+         cellAt(Math.floor(nx + r), Math.floor(ny + r)) === "." &&
+         cellAt(Math.floor(nx - r), Math.floor(ny + r)) === "." &&
+         cellAt(Math.floor(nx + r), Math.floor(ny - r)) === ".";
+}
+function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5) * 1.4; }
+
+function updateAI(dt) {
+  const a = G.ai; if (!a || a.hp <= 0) return;
+
+  // --- 认知:玩家冲刺会在 AI 的屏幕上留下模糊光影 ---
+  if (G.sprinting && G.moving > 0.5 && Math.random() < dt * 1.4) {
+    a.info = { x: G.px + gauss() * 1.4, y: G.py + gauss() * 1.4, t: G.now, q: 1.6 };
+  }
+
+  // --- 移动 ---
+  let tx = a.wx, ty = a.wy, spd = a.speed;
+  if (a.evadeT > 0) {                       // 受击规避:爆发加速
+    a.evadeT -= dt; tx = a.evadeX; ty = a.evadeY; spd = 5.2;
+  } else if (a.sprintT > 0) {               // 主动冲刺换位
+    a.sprintT -= dt; spd = 4.3;
+  }
+  const dx = tx - a.x, dy = ty - a.y, dist = Math.hypot(dx, dy);
+  if (dist < 0.4) {                          // 到达路径点,选下一个
+    a.wx = 1.5 + Math.random() * 13; a.wy = 1.5 + Math.random() * 12;
+    if (cellAt(Math.floor(a.wx), Math.floor(a.wy)) !== ".") { a.wx = 8; a.wy = 7; }
+    if (Math.random() < 0.35) a.sprintT = 0.8 + Math.random() * 1.2;
+  } else {
+    const nx = a.x + dx / dist * spd * dt, ny = a.y + dy / dist * spd * dt;
+    if (aiCollide(nx, a.y)) a.x = nx; else a.wx = 1.5 + Math.random() * 13;
+    if (aiCollide(a.x, ny)) a.y = ny; else a.wy = 1.5 + Math.random() * 12;
+  }
+
+  // --- 留在玩家巨幕上的痕迹 ---
+  const curSpd = dist > 0.01 ? spd : 0;
+  if (curSpd > 3.5) {                        // 冲刺拖尾
+    a.streakT -= dt;
+    if (a.streakT <= 0) {
+      a.streakT = 0.13;
+      traces.push({ x: a.x, y: a.y, t: G.now, type: "streak" });
+    }
+  }
+  a.blobT -= dt;                             // 偶尔闪过的模糊光影
+  if (a.blobT <= 0) {
+    a.blobT = 3.0 + Math.random() * 2.4;
+    traces.push({ x: a.x + gauss() * 0.9, y: a.y + gauss() * 0.9, t: G.now, type: "blob" });
+    sfx.blip();
+  }
+
+  // --- 反击:根据对玩家位置的认知开火 ---
+  a.fireT -= dt;
+  if (a.fireT <= 0) {
+    a.fireT = 2.3 + Math.random() * 1.3;
+    let sx, sy;
+    if (a.info && G.now - a.info.t < 10) {   // 有情报:误差随时间增长
+      const age = G.now - a.info.t;
+      const sig = Math.min(a.info.q + 0.45 * age, 3.4);
+      sx = a.info.x + gauss() * sig; sy = a.info.y + gauss() * sig;
+    } else {                                  // 无情报:盲猜常见区域
+      sx = 3 + Math.random() * 10; sy = 6 + Math.random() * 8;
+    }
+    sx = Math.max(1.2, Math.min(14.8, sx)); sy = Math.max(1.2, Math.min(13.8, sy));
+    incoming.push({ x: sx, y: sy, landT: G.now + 0.38 });
+    // AI 开火同样在自己的位置留下痕迹(给玩家的机会)
+    traces.push({ x: a.x, y: a.y, t: G.now, type: "muzzle" });
+    sfx.enemyFire();
+  }
+}
+
+// AI 被击中/波及后的反应
+function aiThreat(ix, iy, dmg) {
+  const a = G.ai;
+  if (dmg > 0) {
+    a.hp -= dmg;
+    traces.push({ x: a.x, y: a.y, t: G.now, type: "hitflash" });
+    addLog("目标受创! -" + dmg, "#ff8f7d");
+  }
+  // 无论是否命中,弹着点都会惊扰 AI:朝反方向逃逸
+  const dx = a.x - ix, dy = a.y - iy, d = Math.hypot(dx, dy) || 1;
+  a.evadeX = Math.max(1.3, Math.min(14.7, a.x + dx / d * 5));
+  a.evadeY = Math.max(1.3, Math.min(13.7, a.y + dy / d * 5));
+  if (cellAt(Math.floor(a.evadeX), Math.floor(a.evadeY)) !== ".") { a.evadeX = 8; a.evadeY = 4; }
+  a.evadeT = 1.3;
+  // 受惊后立刻获得一次"反击直觉":它大致记得弹着来自哪个方向
+  if (dmg > 0 && Math.random() < 0.5) {
+    a.info = { x: G.px + gauss() * 2.2, y: G.py + gauss() * 2.2, t: G.now, q: 2.2 };
+  }
+}
+
+// ============================================================
+// 输入
+// ============================================================
+document.addEventListener("keydown", e => {
+  keys[e.code] = true;
+  if (e.code === "KeyQ" && G.state === "playing") fireProbe();
+});
+document.addEventListener("keyup", e => keys[e.code] = false);
+canvas.addEventListener("mousedown", e => {
+  if (G.state === "playing" && e.button === 0) fire();
+});
+document.addEventListener("contextmenu", e => e.preventDefault());
+document.addEventListener("mousemove", e => {
+  if (!locked || G.state !== "playing") return;
+  G.yaw += e.movementX * 0.0021;
+  G.pitch -= e.movementY * 0.0016;
+  G.pitch = Math.max(-0.5, Math.min(0.5, G.pitch));
+});
+document.addEventListener("pointerlockchange", () => {
+  locked = document.pointerLockElement === canvas;
+  if (!locked && G.state === "playing") {
+    G.state = "paused";
+    document.getElementById("pause").classList.remove("hidden");
+  }
+});
+function lockPointer() {
+  canvas.requestPointerLock && canvas.requestPointerLock();
+}
+
+// ============================================================
+// 瞄准:视线与巨幕平面求交 → 对面房间坐标
+// ============================================================
+function computeAim() {
+  aim.onMap = false; aim.blocked = false;
+  const cp = Math.cos(G.pitch), sp = Math.sin(G.pitch);
+  const dx = Math.cos(G.yaw) * cp, dy = Math.sin(G.yaw) * cp;
+  if (dy > -1e-5) return;                       // 必须朝北(看向巨幕)
+  const t = (1 - G.py) / dy;
+  if (t <= 0) return;
+  const ix = G.px + t * dx, iz = EYE_Z + t * sp;
+  if (ix < SCR_X0 || ix > SCR_X1 || iz < SCR_Z0 || iz > SCR_Z1) return;
+  const tx = (ix - SCR_X0) / (SCR_X1 - SCR_X0) * SCR_W;
+  const ty = (SCR_Z1 - iz) / (SCR_Z1 - SCR_Z0) * SCR_H;
+  if (tx < MAP_X || tx > MAP_X + MAP_W || ty < MAP_Y || ty > MAP_Y + MAP_H) return;
+  // 遮挡判定:视线先撞到矮箱且交点低于箱顶 → 看不见该点
+  const tHoriz = t * cp;
+  const hits = castRay(G.px, G.py, G.yaw);
+  if (hits[0].cell === "C" && hits[0].dist < tHoriz && iz < CRATE_H) {
+    aim.blocked = true;
+    return;
+  }
+  aim.onMap = true;
+  aim.ex = (tx - MAP_X) / MAP_W * ROOM_W;
+  aim.ey = (ty - MAP_Y) / MAP_H * ROOM_D;
+}
+
+// ============================================================
+// 开火 / 探测器
+// ============================================================
+function fire() {
+  if (G.fireCd > 0) return;
+  G.fireCd = 0.5; G.recoil = 1; G.muzzle = 0.09; G.shake = Math.max(G.shake, 0.25);
+  G.shots++;
+  sfx.shot();
+  if (aim.onMap) {
+    inFlight.push({ x: aim.ex, y: aim.ey, landT: G.now + 0.26 });
+  } else {
+    addMsg("子弹打在了巨幕边框上", "#7fa3b8");
+  }
+  // 开火即暴露:AI 精确记住你这一刻的位置
+  G.ai.info = { x: G.px, y: G.py, t: G.now, q: 0.9 };
+  addMsg("位置已暴露 —— 建议转移", "#ffb27d");
+}
+function fireProbe() {
+  if (G.detectors <= 0) { sfx.empty(); addMsg("探测器已耗尽", "#ff8f7d"); return; }
+  if (!aim.onMap) { addMsg("瞄准巨幕上的地图再发射探测器", "#7fa3b8"); return; }
+  G.detectors--;
+  probes.push({ x: aim.ex, y: aim.ey, landT: G.now + 0.8, until: G.now + 0.8 + 2.6, locked: false, lx: 0, ly: 0, done: false });
+  sfx.ping();
+  addMsg("探测器已发射", "#7dd8ff");
+}
+
+// ============================================================
+// 日志 / 消息
+// ============================================================
+function addLog(txt, color) { logs.push({ txt, t: G.now, color: color || "#9fd0e8" }); if (logs.length > 7) logs.shift(); }
+function addMsg(txt, color) { msgs.push({ txt, t: G.now, color: color || "#cfe7f5" }); if (msgs.length > 3) msgs.shift(); }
+
+// ============================================================
+// 回合流程
+// ============================================================
+function startRound() {
+  G.state = "playing";
+  G.timeLeft = ROUND_TIME;
+  G.px = 8; G.py = 12.5; G.yaw = -Math.PI / 2; G.pitch = 0;
+  G.hp = 100; G.detectors = 3; G.fireCd = 0; G.recoil = 0;
+  G.hurtFlash = 0; G.missFlash = 0; G.shake = 0;
+  G.shots = 0; G.hits = 0; G.dmgDealt = 0; G.dmgTaken = 0;
+  G.hintT = 9;
+  G.ai = newAI();
+  traces = []; impacts = []; probes = []; inFlight = []; incoming = []; logs = []; msgs = [];
+  addLog("战术链路已建立", "#54d8ff");
+  addLog("侦测到对面房间有活动", "#ffd47e");
+  addMsg("回合开始 —— 120 秒", "#54d8ff");
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("end").classList.add("hidden");
+  document.getElementById("pause").classList.add("hidden");
+  lockPointer();
+}
+function endRound(result) {
+  G.state = "over";
+  document.exitPointerLock && document.exitPointerLock();
+  const t = document.getElementById("endTitle");
+  const acc = G.shots > 0 ? Math.round(G.hits / G.shots * 100) : 0;
+  if (result === "win") { t.textContent = "猎 杀 成 功"; t.className = "result win"; sfx.win(); }
+  else if (result === "lose") { t.textContent = "信 号 消 失"; t.className = "result lose"; sfx.lose(); }
+  else { t.textContent = "僵 持"; t.className = "result draw"; }
+  document.getElementById("endStats").innerHTML =
+    "开火 <b>" + G.shots + "</b> 次 · 命中 <b>" + G.hits + "</b> 次 · 命中率 <b>" + acc + "%</b><br>" +
+    "造成伤害 <b>" + G.dmgDealt + "</b> · 承受伤害 <b>" + G.dmgTaken + "</b><br>" +
+    "对方剩余生命 <b>" + Math.max(0, Math.round(G.ai.hp)) + "</b>";
+  document.getElementById("end").classList.remove("hidden");
+}
+document.getElementById("startBtn").addEventListener("click", () => { initAudio(); startRound(); });
+document.getElementById("againBtn").addEventListener("click", () => { initAudio(); startRound(); });
+document.getElementById("pause").addEventListener("click", () => {
+  document.getElementById("pause").classList.add("hidden");
+  G.state = "playing";
+  lockPointer();
+});
+
+// ============================================================
+// 更新
+// ============================================================
+function tryMove(nx, ny) {
+  const r = 0.3;
+  const ok = (x, y) =>
+    cellAt(Math.floor(x - r), Math.floor(y - r)) === "." &&
+    cellAt(Math.floor(x + r), Math.floor(y - r)) === "." &&
+    cellAt(Math.floor(x - r), Math.floor(y + r)) === "." &&
+    cellAt(Math.floor(x + r), Math.floor(y + r)) === ".";
+  if (ok(nx, G.py)) G.px = nx;
+  if (ok(G.px, ny)) G.py = ny;
+}
+function update(dt) {
+  if (G.state !== "playing") return;
+  G.now += dt;
+  G.timeLeft -= dt;
+  G.fireCd -= dt;
+  G.recoil = Math.max(0, G.recoil - dt * 6);
+  G.muzzle = Math.max(0, G.muzzle - dt);
+  G.hurtFlash = Math.max(0, G.hurtFlash - dt * 1.6);
+  G.missFlash = Math.max(0, G.missFlash - dt * 2.2);
+  G.shake = Math.max(0, G.shake - dt * 1.8);
+  G.hintT = Math.max(0, G.hintT - dt);
+
+  // --- 玩家移动 ---
+  let mx = 0, my = 0;
+  if (keys.KeyW) { mx += Math.cos(G.yaw); my += Math.sin(G.yaw); }
+  if (keys.KeyS) { mx -= Math.cos(G.yaw); my -= Math.sin(G.yaw); }
+  if (keys.KeyA) { mx += Math.cos(G.yaw - Math.PI / 2); my += Math.sin(G.yaw - Math.PI / 2); }
+  if (keys.KeyD) { mx += Math.cos(G.yaw + Math.PI / 2); my += Math.sin(G.yaw + Math.PI / 2); }
+  const ml = Math.hypot(mx, my);
+  G.sprinting = !!(keys.ShiftLeft || keys.ShiftRight) && ml > 0;
+  const spd = G.sprinting ? 5.2 : 3.1;
+  if (ml > 0) {
+    tryMove(G.px + mx / ml * spd * dt, G.py + my / ml * spd * dt);
+    G.moving = 1;
+    const prev = G.bobPhase;
+    G.bobPhase += dt * (G.sprinting ? 11 : 7.5);
+    G.bobAmp = Math.min(1, G.bobAmp + dt * 5);
+    if (Math.floor(prev / Math.PI) !== Math.floor(G.bobPhase / Math.PI)) sfx.step(G.sprinting);
+  } else {
+    G.moving = 0;
+    G.bobAmp = Math.max(0, G.bobAmp - dt * 5);
+  }
+
+  computeAim();
+
+  // --- 玩家子弹落点结算 ---
+  for (let i = inFlight.length - 1; i >= 0; i--) {
+    const b = inFlight[i];
+    if (G.now >= b.landT) {
+      inFlight.splice(i, 1);
+      const d = Math.hypot(G.ai.x - b.x, G.ai.y - b.y);
+      let dmg = 0;
+      if (d < 0.9) dmg = 30; else if (d < 1.7) dmg = 14;
+      impacts.push({ x: b.x, y: b.y, t: G.now, hit: dmg > 0 });
+      if (dmg > 0) {
+        G.hits++; G.dmgDealt += dmg;
+        sfx.hit();
+        addMsg(dmg === 30 ? "直接命中! -30" : "擦中目标 -14", "#6fe3ff");
+        addLog(dmg === 30 ? "确认命中目标" : "疑似擦中目标", "#6fe3ff");
+      }
+      aiThreat(b.x, b.y, dmg);
+      if (G.ai.hp <= 0) { endRound("win"); return; }
+    }
+  }
+
+  // --- AI 子弹落点结算 ---
+  for (let i = incoming.length - 1; i >= 0; i--) {
+    const b = incoming[i];
+    if (G.now >= b.landT) {
+      incoming.splice(i, 1);
+      const d = Math.hypot(G.px - b.x, G.py - b.y);
+      let dmg = 0;
+      if (d < 0.85) dmg = 24; else if (d < 1.7) dmg = 12;
+      if (dmg > 0) {
+        G.hp -= dmg; G.dmgTaken += dmg;
+        G.hurtFlash = Math.min(1, 0.5 + dmg / 40);
+        G.shake = Math.max(G.shake, 0.7);
+        sfx.hurt(); sfx.boom();
+        addMsg(dmg >= 24 ? "你被直接命中! -" + dmg : "你被波及 -" + dmg, "#ff7d6b");
+        if (G.hp <= 0) { endRound("lose"); return; }
+      } else if (d < 3.2) {
+        G.missFlash = Math.max(G.missFlash, 1 - d / 3.5);
+        G.shake = Math.max(G.shake, 0.35);
+        sfx.boom();
+        addMsg("弹着点很近 —— 他快锁定你了", "#ffb27d");
+      } else {
+        sfx.boom();
+      }
+    }
+  }
+
+  // --- 探测器 ---
+  for (let i = probes.length - 1; i >= 0; i--) {
+    const p = probes[i];
+    if (G.now >= p.landT && !p.done) {
+      const d = Math.hypot(G.ai.x - p.x, G.ai.y - p.y);
+      if (d < 2.4) {
+        if (!p.locked) { sfx.lock(); addLog("探测器:目标锁定!", "#ff8f7d"); addMsg("探测器锁定目标!", "#6fe3ff"); }
+        p.locked = true; p.lx = G.ai.x; p.ly = G.ai.y;
+      }
+      if (G.now >= p.until) {
+        p.done = true;
+        if (!p.locked) { sfx.empty(); addLog("探测器:区域无信号", "#7fa3b8"); addMsg("探测器:该区域空无一人", "#7fa3b8"); }
+        probes.splice(i, 1);
+      }
+    }
+  }
+
+  updateAI(dt);
+
+  // --- 计时结束 ---
+  if (G.timeLeft <= 0) {
+    if (G.hp > G.ai.hp) endRound("win");
+    else if (G.hp < G.ai.hp) endRound("lose");
+    else endRound("draw");
+  }
+}
+
+// ============================================================
+// 光线投射
+// ============================================================
+const CRATE_H = 2.2;   // 障碍物高度(矮箱,可越过它看巨幕)
+function castRay(px, py, ang) {
+  // 返回沿途命中的表面(最多 2 层:矮箱 + 其后的墙/巨幕)
+  const dx = Math.cos(ang), dy = Math.sin(ang);
+  let mapX = Math.floor(px), mapY = Math.floor(py);
+  const dX = Math.abs(1 / (dx || 1e-9)), dY = Math.abs(1 / (dy || 1e-9));
+  let stepX, stepY, sX, sY;
+  if (dx < 0) { stepX = -1; sX = (px - mapX) * dX; } else { stepX = 1; sX = (mapX + 1 - px) * dX; }
+  if (dy < 0) { stepY = -1; sY = (py - mapY) * dY; } else { stepY = 1; sY = (mapY + 1 - py) * dY; }
+  let side = 0;
+  const hits = [];
+  for (let i = 0; i < 64; i++) {
+    if (sX < sY) { sX += dX; mapX += stepX; side = 0; }
+    else { sY += dY; mapY += stepY; side = 1; }
+    const c = cellAt(mapX, mapY);
+    if (c !== ".") {
+      let dist, hit;
+      if (side === 0) { dist = (mapX - px + (1 - stepX) / 2) / (dx || 1e-9); hit = py + dist * dy; }
+      else { dist = (mapY - py + (1 - stepY) / 2) / (dy || 1e-9); hit = px + dist * dx; }
+      hits.push({ dist: Math.max(dist, 0.001), side, hit, cell: c, mapX, mapY });
+      if (c === "#" || hits.length === 2) break;
+    }
+  }
+  if (!hits.length) hits.push({ dist: 64, side: 0, hit: 0, cell: "#", mapX: 0, mapY: 0 });
+  return hits;
+}
+
+// ============================================================
+// 巨幕内容绘制(对面房间的实时俯视地图)
+// ============================================================
+function drawScreen() {
+  // 背景
+  const bg = sg.createLinearGradient(0, 0, 0, SCR_H);
+  bg.addColorStop(0, "#061019"); bg.addColorStop(1, "#040a12");
+  sg.fillStyle = bg; sg.fillRect(0, 0, SCR_W, SCR_H);
+
+  // ---- 中央地图 ----
+  sg.fillStyle = "#08131f";
+  sg.fillRect(MAP_X, MAP_Y, MAP_W, MAP_H);
+  // 网格
+  sg.strokeStyle = "rgba(70,140,180,.14)"; sg.lineWidth = 1;
+  sg.beginPath();
+  for (let i = 1; i < ROOM_W; i++) { sg.moveTo(MAP_X + i * MSX, MAP_Y); sg.lineTo(MAP_X + i * MSX, MAP_Y + MAP_H); }
+  for (let j = 1; j < ROOM_D; j++) { sg.moveTo(MAP_X, MAP_Y + j * MSY); sg.lineTo(MAP_X + MAP_W, MAP_Y + j * MSY); }
+  sg.stroke();
+  // 障碍物
+  sg.fillStyle = "rgba(110,150,180,.28)";
+  for (let y = 0; y < ROOM_D; y++) for (let x = 0; x < ROOM_W; x++)
+    if (GRID[y][x] === "C") sg.fillRect(MAP_X + x * MSX + 1, MAP_Y + y * MSY + 1, MSX - 2, MSY - 2);
+  // 边框
+  sg.strokeStyle = "rgba(90,200,255,.55)"; sg.lineWidth = 2;
+  sg.strokeRect(MAP_X, MAP_Y, MAP_W, MAP_H);
+
+  const toX = ex => MAP_X + ex * MSX, toY = ey => MAP_Y + ey * MSY;
+
+  // ---- 痕迹 ----
+  for (let i = traces.length - 1; i >= 0; i--) {
+    const tr = traces[i], age = G.now - tr.t;
+    if (tr.type === "streak") {
+      if (age > 1.6) { traces.splice(i, 1); continue; }
+      const a = (1 - age / 1.6) * 0.5;
+      const g = sg.createRadialGradient(toX(tr.x), toY(tr.y), 0, toX(tr.x), toY(tr.y), 9);
+      g.addColorStop(0, "rgba(120,220,255," + a + ")"); g.addColorStop(1, "rgba(120,220,255,0)");
+      sg.fillStyle = g; sg.beginPath(); sg.arc(toX(tr.x), toY(tr.y), 9, 0, 7); sg.fill();
+    } else if (tr.type === "blob") {
+      if (age > 1.5) { traces.splice(i, 1); continue; }
+      const a = (1 - age / 1.5) * 0.38;
+      const g = sg.createRadialGradient(toX(tr.x), toY(tr.y), 0, toX(tr.x), toY(tr.y), 22);
+      g.addColorStop(0, "rgba(150,230,255," + a + ")"); g.addColorStop(1, "rgba(150,230,255,0)");
+      sg.fillStyle = g; sg.beginPath(); sg.arc(toX(tr.x), toY(tr.y), 22, 0, 7); sg.fill();
+    } else if (tr.type === "muzzle") {
+      if (age > 0.9) { traces.splice(i, 1); continue; }
+      const a = (1 - age / 0.9);
+      sg.fillStyle = "rgba(255,180,90," + a * 0.8 + ")";
+      sg.beginPath(); sg.arc(toX(tr.x), toY(tr.y), 5 + age * 14, 0, 7); sg.fill();
+    } else if (tr.type === "hitflash") {
+      if (age > 1.1) { traces.splice(i, 1); continue; }
+      const a = (1 - age / 1.1);
+      sg.strokeStyle = "rgba(255,90,70," + a + ")"; sg.lineWidth = 3;
+      sg.beginPath(); sg.arc(toX(tr.x), toY(tr.y), 8 + age * 26, 0, 7); sg.stroke();
+    }
+  }
+
+  // ---- 弹着点 ----
+  for (let i = impacts.length - 1; i >= 0; i--) {
+    const im = impacts[i], age = G.now - im.t;
+    if (age > 1.2) { impacts.splice(i, 1); continue; }
+    const a = 1 - age / 1.2;
+    sg.strokeStyle = im.hit ? "rgba(255,120,100," + a + ")" : "rgba(140,220,255," + a * 0.8 + ")";
+    sg.lineWidth = 2;
+    sg.beginPath(); sg.arc(toX(im.x), toY(im.y), 4 + age * 30, 0, 7); sg.stroke();
+    sg.fillStyle = im.hit ? "rgba(255,120,100," + a + ")" : "rgba(140,220,255," + a + ")";
+    sg.fillRect(toX(im.x) - 1.5, toY(im.y) - 1.5, 3, 3);
+  }
+
+  // ---- 探测器 ----
+  for (const p of probes) {
+    if (G.now < p.landT) {   // 飞行中:接近动画
+      const k = 1 - (p.landT - G.now) / 0.8;
+      sg.strokeStyle = "rgba(120,220,255," + (0.3 + k * 0.5) + ")"; sg.lineWidth = 1.5;
+      sg.beginPath(); sg.arc(toX(p.x), toY(p.y), 40 - k * 30, 0, 7); sg.stroke();
+    } else {
+      const remain = p.until - G.now, sweep = (G.now * 3) % (Math.PI * 2);
+      sg.strokeStyle = "rgba(120,220,255," + Math.min(1, remain) * 0.7 + ")";
+      sg.lineWidth = 1.5; sg.setLineDash([5, 4]);
+      sg.beginPath(); sg.arc(toX(p.x), toY(p.y), 2.4 * MSX, 0, 7); sg.stroke();
+      sg.setLineDash([]);
+      sg.beginPath(); sg.moveTo(toX(p.x), toY(p.y));
+      sg.lineTo(toX(p.x) + Math.cos(sweep) * 2.4 * MSX, toY(p.y) + Math.sin(sweep) * 2.4 * MSX);
+      sg.stroke();
+      if (p.locked) {
+        const px2 = toX(p.lx), py2 = toY(p.ly);
+        sg.fillStyle = "rgba(255,80,60,.95)";
+        sg.beginPath(); sg.arc(px2, py2, 5, 0, 7); sg.fill();
+        sg.strokeStyle = "rgba(255,80,60,.8)"; sg.lineWidth = 1.5;
+        sg.strokeRect(px2 - 11, py2 - 11, 22, 22);
+        sg.fillStyle = "rgba(255,120,100,.9)"; sg.font = "bold 13px monospace";
+        sg.fillText("TARGET", px2 + 15, py2 - 8);
+      }
+    }
+  }
+
+  // 地图标签
+  sg.fillStyle = "rgba(120,200,240,.6)"; sg.font = "11px monospace";
+  sg.fillText("SECTOR-B // 对面房间 · 实时监控", MAP_X + 6, MAP_Y + 15);
+  sg.fillStyle = "rgba(255,80,70," + (Math.sin(G.now * 4) > 0 ? 0.9 : 0.25) + ")";
+  sg.beginPath(); sg.arc(MAP_X + MAP_W - 12, MAP_Y + 11, 4, 0, 7); sg.fill();
+  sg.fillStyle = "rgba(200,230,255,.7)";
+  sg.fillText("LIVE", MAP_X + MAP_W - 48, MAP_Y + 15);
+
+  // ---- 左侧面板:情报日志 ----
+  sg.fillStyle = "rgba(120,200,240,.85)"; sg.font = "bold 15px monospace";
+  sg.fillText("▍TACTICAL LOG", 40, 52);
+  sg.fillStyle = "rgba(120,200,240,.4)"; sg.font = "11px monospace";
+  sg.fillText("对 方 动 态", 40, 72);
+  sg.font = "13px monospace";
+  for (let i = 0; i < logs.length; i++) {
+    const l = logs[logs.length - 1 - i], age = G.now - l.t;
+    if (age > 8) continue;
+    sg.globalAlpha = Math.max(0.15, 1 - age / 8);
+    sg.fillStyle = l.color;
+    sg.fillText("» " + l.txt, 40, 108 + i * 26);
+  }
+  sg.globalAlpha = 1;
+  // 装饰波形
+  sg.strokeStyle = "rgba(80,180,230,.35)"; sg.lineWidth = 1.5;
+  sg.beginPath();
+  for (let x = 0; x <= 380; x += 4) {
+    const y = 330 + Math.sin(x * 0.06 + G.now * 3) * 12 * Math.sin(x * 0.013 + G.now);
+    x === 0 ? sg.moveTo(40 + x, y) : sg.lineTo(40 + x, y);
+  }
+  sg.stroke();
+  sg.fillStyle = "rgba(120,200,240,.3)"; sg.font = "10px monospace";
+  sg.fillText("SIGNAL INTERCEPT // CH-16", 40, 365);
+
+  // ---- 右侧面板 ----
+  const RX = MAP_X + MAP_W + 40;
+  sg.fillStyle = "rgba(120,200,240,.85)"; sg.font = "bold 15px monospace";
+  sg.fillText("▍UPLINK STATUS", RX, 52);
+  sg.font = "12px monospace"; sg.fillStyle = "rgba(160,210,240,.65)";
+  sg.fillText("链路延迟 .... 12ms", RX, 84);
+  sg.fillText("弹道解算 .... ONLINE", RX, 106);
+  sg.fillText("探测器库存 .. " + G.detectors + "/3", RX, 128);
+  // 探测器库存条
+  for (let i = 0; i < 3; i++) {
+    sg.fillStyle = i < G.detectors ? "rgba(110,220,255,.85)" : "rgba(110,220,255,.15)";
+    sg.fillRect(RX + i * 34, 142, 26, 8);
+  }
+  // 大字装饰
+  sg.save();
+  sg.translate(RX + 120, 260); sg.rotate(Math.PI / 2);
+  sg.fillStyle = "rgba(90,190,240,.14)"; sg.font = "bold 64px sans-serif";
+  sg.fillText("对屏 OTHERSIDE", 0, 0);
+  sg.restore();
+  // 假数据条
+  for (let i = 0; i < 5; i++) {
+    const v = 0.3 + 0.7 * Math.abs(Math.sin(G.now * (0.5 + i * 0.23) + i * 2));
+    sg.fillStyle = "rgba(80,180,230,.25)"; sg.fillRect(RX, 320 + i * 16, 240, 8);
+    sg.fillStyle = "rgba(110,220,255,.5)"; sg.fillRect(RX, 320 + i * 16, 240 * v, 8);
+  }
+
+  // 扫描线 + 边缘辉光
+  sg.fillStyle = scanPat; sg.fillRect(0, 0, SCR_W, SCR_H);
+  const vg = sg.createRadialGradient(SCR_W/2, SCR_H/2, SCR_H/3, SCR_W/2, SCR_H/2, SCR_W/1.4);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.45)");
+  sg.fillStyle = vg; sg.fillRect(0, 0, SCR_W, SCR_H);
+}
+
+// ============================================================
+// 3D 场景渲染
+// ============================================================
+function render3D() {
+  const bobY = Math.sin(G.bobPhase) * 4 * G.bobAmp;
+  const shakeX = (Math.random() - 0.5) * G.shake * 14;
+  const shakeY = (Math.random() - 0.5) * G.shake * 10;
+  const horizon = H / 2 + Math.tan(G.pitch) * PROJ + bobY + shakeY;
+
+  ctx.fillStyle = ceilGrad; ctx.fillRect(0, 0, W, Math.max(0, horizon));
+  ctx.fillStyle = floorGrad; ctx.fillRect(0, Math.max(0, horizon), W, H - horizon);
+
+  const rowAt = (z, scale) => horizon + (EYE_Z - z) * scale;
+
+  // 画一整列墙面/巨幕
+  function drawSurfColumn(r, perp, x, sx8) {
+    const scale = PROJ / perp;
+    const top = rowAt(WALL_H, scale), bot = rowAt(0, scale);
+    const ch = bot - top;
+    const u = r.hit - Math.floor(r.hit);
+    const shade = Math.min(0.8, perp * 0.05) + (r.side === 0 ? 0.10 : 0);
+    const isScreen = r.cell === "#" && r.side === 1 && r.mapY === 0 && r.hit >= SCR_X0 && r.hit <= SCR_X1;
+    if (isScreen) {
+      ctx.drawImage(wallTex, u * 128, 0, 1, 128, x + sx8, top, colW, ch);
+      ctx.fillStyle = "rgba(0,0,0," + Math.min(0.7, shade) + ")";
+      ctx.fillRect(x + sx8, top, colW, ch);
+      const sTop = rowAt(SCR_Z1, scale), sBot = rowAt(SCR_Z0, scale);
+      const sx = (r.hit - SCR_X0) / (SCR_X1 - SCR_X0) * SCR_W;
+      ctx.drawImage(scr, sx, 0, 1, SCR_H, x + sx8, sTop, colW, sBot - sTop);
+      ctx.fillStyle = "rgba(0,10,20," + Math.min(0.25, perp * 0.015) + ")";
+      ctx.fillRect(x + sx8, sTop, colW, sBot - sTop);
+    } else {
+      ctx.drawImage(wallTex, u * 128, 0, 1, 128, x + sx8, top, colW, ch);
+      ctx.fillStyle = "rgba(0,0,0," + Math.min(0.85, shade) + ")";
+      ctx.fillRect(x + sx8, top, colW, ch);
+    }
+  }
+  // 画矮箱列(只有 0 ~ CRATE_H 一段)
+  function drawCrateColumn(r, perp, x, sx8) {
+    const scale = PROJ / perp;
+    const top = rowAt(CRATE_H, scale), bot = rowAt(0, scale);
+    const u = r.hit - Math.floor(r.hit);
+    const shade = Math.min(0.75, perp * 0.05) + (r.side === 0 ? 0.10 : 0);
+    ctx.drawImage(crateTex, u * 128, 0, 1, 128, x + sx8, top, colW, bot - top);
+    ctx.fillStyle = "rgba(0,0,0," + Math.min(0.8, shade) + ")";
+    ctx.fillRect(x + sx8, top, colW, bot - top);
+  }
+
+  for (let x = 0; x < W; x += colW) {
+    const camX = (x + colW / 2 - W / 2) / PROJ;
+    const ang = G.yaw + Math.atan(camX);
+    const hits = castRay(G.px, G.py, ang);
+    const first = hits[0];
+    const perp1 = first.dist * Math.cos(ang - G.yaw);
+    if (first.cell === "C" && hits.length > 1) {
+      const back = hits[1];
+      const perp2 = back.dist * Math.cos(ang - G.yaw);
+      drawSurfColumn(back, perp2, x, shakeX);   // 先画后面的墙/巨幕
+      drawCrateColumn(first, perp1, x, shakeX); // 再画前面的矮箱
+    } else if (first.cell === "C") {
+      drawCrateColumn(first, perp1, x, shakeX);
+    } else {
+      drawSurfColumn(first, perp1, x, shakeX);
+    }
+  }
+}
+
+// ============================================================
+// 武器 / HUD
+// ============================================================
+function drawWeapon() {
+  const sway = Math.sin(G.bobPhase * 0.5) * 6 * G.bobAmp;
+  const bob = Math.abs(Math.sin(G.bobPhase)) * 7 * G.bobAmp;
+  const rec = G.recoil * 26;
+  const cx = W / 2 + 90 + sway, cy = H - 40 + bob + rec;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-0.06 + G.recoil * 0.08);
+  // 枪身
+  ctx.fillStyle = "#1a222c";
+  ctx.beginPath();
+  ctx.moveTo(-30, 0); ctx.lineTo(150, -46); ctx.lineTo(170, -28); ctx.lineTo(30, 30); ctx.lineTo(-30, 26);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#26313e";
+  ctx.beginPath();
+  ctx.moveTo(-30, 0); ctx.lineTo(150, -46); ctx.lineTo(154, -38); ctx.lineTo(-24, 8);
+  ctx.closePath(); ctx.fill();
+  // 能量槽
+  ctx.fillStyle = "rgba(80,220,255," + (0.35 + (1 - Math.max(0, G.fireCd) / 0.5) * 0.5) + ")";
+  ctx.fillRect(20, -18, 90, 5);
+  // 瞄具
+  ctx.fillStyle = "#10161d"; ctx.fillRect(52, -52, 14, 26);
+  ctx.fillStyle = "rgba(110,230,255,.8)"; ctx.fillRect(56, -48, 6, 6);
+  ctx.restore();
+
+  // 枪口火光
+  if (G.muzzle > 0) {
+    const a = G.muzzle / 0.09;
+    const g = ctx.createRadialGradient(W/2 + 40, H - 160, 0, W/2 + 40, H - 160, 120);
+    g.addColorStop(0, "rgba(255,230,160," + 0.7 * a + ")");
+    g.addColorStop(1, "rgba(255,160,60,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(W/2 + 40, H - 160, 120, 0, 7); ctx.fill();
+  }
+}
+
+function drawHUD() {
+  const cx = W / 2, cy = H / 2 + Math.tan(G.pitch) * PROJ;
+
+  // 准星
+  const spread = 6 + G.recoil * 10;
+  ctx.strokeStyle = aim.onMap ? "rgba(110,230,255,.95)" : (aim.blocked ? "rgba(255,170,90,.8)" : "rgba(200,220,230,.55)");
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(cx - spread - 7, cy); ctx.lineTo(cx - spread, cy);
+  ctx.moveTo(cx + spread, cy); ctx.lineTo(cx + spread + 7, cy);
+  ctx.moveTo(cx, cy - spread - 7); ctx.lineTo(cx, cy - spread);
+  ctx.moveTo(cx, cy + spread); ctx.lineTo(cx, cy + spread + 7);
+  ctx.stroke();
+  ctx.fillStyle = aim.onMap ? "rgba(110,230,255,.9)" : "rgba(200,220,230,.5)";
+  ctx.fillRect(cx - 1, cy - 1, 2, 2);
+  if (aim.onMap) {
+    ctx.font = "11px monospace"; ctx.fillStyle = "rgba(110,230,255,.7)";
+    ctx.fillText("X " + aim.ex.toFixed(1) + "  Y " + aim.ey.toFixed(1), cx + 16, cy - 12);
+  }
+
+  // 计时
+  const t = Math.max(0, G.timeLeft);
+  const mm = Math.floor(t / 60), ss = Math.floor(t % 60);
+  ctx.font = "200 42px monospace"; ctx.textAlign = "center";
+  ctx.fillStyle = t < 20 ? "rgba(255,110,90,.95)" : "rgba(210,240,255,.9)";
+  ctx.fillText(mm + ":" + (ss < 10 ? "0" : "") + ss, cx, 58);
+  ctx.font = "10px monospace"; ctx.fillStyle = "rgba(140,190,220,.5)";
+  ctx.fillText("— ROUND TIME —", cx, 76);
+  ctx.textAlign = "left";
+
+  // 血量
+  const bw = 240;
+  ctx.fillStyle = "rgba(10,20,30,.65)"; ctx.fillRect(36, H - 74, bw + 8, 34);
+  ctx.strokeStyle = "rgba(90,180,230,.35)"; ctx.strokeRect(36, H - 74, bw + 8, 34);
+  const hpK = Math.max(0, G.hp) / 100;
+  const hpg = ctx.createLinearGradient(40, 0, 40 + bw, 0);
+  hpg.addColorStop(0, hpK > 0.35 ? "#3fd6a4" : "#ff6b5e");
+  hpg.addColorStop(1, hpK > 0.35 ? "#7de8ff" : "#ffa06b");
+  ctx.fillStyle = hpg; ctx.fillRect(40, H - 70, bw * hpK, 26);
+  ctx.font = "bold 15px monospace"; ctx.fillStyle = "#eaf7ff";
+  ctx.fillText("HP " + Math.max(0, Math.round(G.hp)), 48, H - 51);
+  ctx.font = "10px monospace"; ctx.fillStyle = "rgba(140,190,220,.55)";
+  ctx.fillText("VITAL SIGNS // 你的生命", 40, H - 84);
+
+  // 探测器
+  ctx.font = "10px monospace"; ctx.fillStyle = "rgba(140,190,220,.55)";
+  ctx.fillText("PROBES [Q] // 探测器", W - 190, H - 84);
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = i < G.detectors ? "rgba(110,220,255,.9)" : "rgba(110,220,255,.15)";
+    ctx.beginPath(); ctx.arc(W - 172 + i * 30, H - 58, 9, 0, 7); ctx.fill();
+    ctx.strokeStyle = "rgba(200,240,255,.4)"; ctx.stroke();
+  }
+
+  // 消息
+  ctx.textAlign = "center"; ctx.font = "14px monospace";
+  for (let i = 0; i < msgs.length; i++) {
+    const m = msgs[msgs.length - 1 - i], age = G.now - m.t;
+    if (age > 2.6) { msgs.splice(msgs.indexOf(m), 1); continue; }
+    ctx.globalAlpha = Math.min(1, 2.6 - age);
+    ctx.fillStyle = m.color;
+    ctx.fillText(m.txt, cx, H - 130 - i * 24);
+  }
+  ctx.globalAlpha = 1; ctx.textAlign = "left";
+
+  // 开局提示
+  if (G.hintT > 0) {
+    ctx.globalAlpha = Math.min(1, G.hintT / 2);
+    ctx.textAlign = "center";
+    ctx.font = "15px sans-serif"; ctx.fillStyle = "rgba(200,235,255,.85)";
+    ctx.fillText("瞄准巨幕上的地图开火 —— 子弹会落进对面的房间", cx, H * 0.22);
+    ctx.font = "12px sans-serif"; ctx.fillStyle = "rgba(255,180,125,.75)";
+    ctx.fillText("开火会暴露你的位置;对方冲刺时会在地图上留下痕迹", cx, H * 0.22 + 24);
+    ctx.textAlign = "left"; ctx.globalAlpha = 1;
+  }
+
+  // 受击红晕
+  if (G.hurtFlash > 0) {
+    const g = ctx.createRadialGradient(cx, H/2, H/4, cx, H/2, H/1.1);
+    g.addColorStop(0, "rgba(255,30,20,0)");
+    g.addColorStop(1, "rgba(255,30,20," + 0.55 * G.hurtFlash + ")");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  // 擦弹边缘泛红(梦里那种"屏幕边缘亮了一下")
+  if (G.missFlash > 0) {
+    const g = ctx.createRadialGradient(cx, H/2, H/2.2, cx, H/2, H/1.05);
+    g.addColorStop(0, "rgba(255,60,40,0)");
+    g.addColorStop(1, "rgba(255,60,40," + 0.35 * G.missFlash + ")");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  // 低血量脉冲
+  if (G.hp < 35 && G.state === "playing") {
+    const p = (Math.sin(G.now * 5) + 1) / 2 * 0.18 * (1 - G.hp / 40);
+    const g = ctx.createRadialGradient(cx, H/2, H/3, cx, H/2, H);
+    g.addColorStop(0, "rgba(255,0,0,0)"); g.addColorStop(1, "rgba(255,0,0," + p + ")");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+  // 暗角
+  const v = ctx.createRadialGradient(cx, H/2, H/2.6, cx, H/2, H);
+  v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,.4)");
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+}
+
+// ============================================================
+// 主循环
+// ============================================================
+let lastT = performance.now();
+function loop(nowMs) {
+  requestAnimationFrame(loop);
+  let dt = (nowMs - lastT) / 1000; lastT = nowMs;
+  if (dt > 0.05) dt = 0.05;
+  update(dt);
+  if (G.state === "playing" || G.state === "paused" || G.state === "over") {
+    drawScreen();
+    render3D();
+    drawWeapon();
+    drawHUD();
+  }
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
