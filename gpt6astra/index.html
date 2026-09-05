@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17231f">
+  <meta name="description" content="盲区：一个关于看不见的对手的梦。原生 3D、完全离线、120 秒第一人称心理对决。">
+  <title>盲区 BLINDSPOT — 看不见，不代表不在。</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c3028'/%3E%3Cpath d='M14 24V14h10m16 0h10v10m0 16v10H40m-16 0H14V40' fill='none' stroke='%23c4d4af' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='7' fill='none' stroke='%23c4d4af' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-state="menu">
+  <canvas id="world" aria-label="第一人称的 16 米乘 15 米镜像对战房间" tabindex="-1"></canvas>
+  <div class="atmosphere" aria-hidden="true"></div>
+  <div id="damage-overlay" aria-hidden="true"></div>
+  <div id="incoming-overlay" aria-hidden="true"></div>
+  <div id="scan-overlay" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="wordmark" href="#" id="brand" aria-label="盲区，返回主界面">
+      <svg class="brand-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M4 14V4h10m12 0h10v10m0 12v10H26m-12 0H4V26"/><circle cx="20" cy="20" r="6"/><path d="M20 0v8m0 24v8M0 20h8m24 0h8" opacity=".35"/></svg>
+      <span>盲区 <small>BLINDSPOT</small></span>
+    </a>
+    <div class="header-center" id="header-caption">看不见，不代表不在。</div>
+    <div class="header-actions">
+      <span class="offline-label"><i></i> 本地梦境 <span class="slash">/</span> 1 VS 1</span>
+      <button class="icon-button" id="sound-toggle" title="静音（M）" aria-label="关闭声音" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="mute-line" d="m16 9 5 6m0-6-5 6"/></svg></button>
+      <button class="icon-button" id="settings-open" title="设置" aria-label="打开设置"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 17h16"/><rect x="7" y="4" width="4" height="6" rx="1"/><rect x="14" y="14" width="4" height="6" rx="1"/></svg></button>
+      <button class="icon-button in-game" id="pause-open" title="暂停（Esc）" aria-label="暂停对局"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
+    </div>
+  </header>
+
+  <main id="menu" class="menu-layer">
+    <section class="hero">
+      <div class="edition"><span class="small-line"></span> 梦境实验 · 第 001 号</div>
+      <h1>盲区<span>BLINDSPOT</span></h1>
+      <h2>你看不见他。<br>但他在那里。</h2>
+      <p class="hero-description">一间房，一面巨幕，一个看不见的对手。<br>循着回声猜他的位置。扣下扳机，然后离开。</p>
+      <button id="start-button" class="primary-button"><span class="button-name">进入梦境 <small>开始 1v1 对决</small></span><svg viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M4 14h19M15 6l8 8-8 8"/></svg></button>
+      <div class="start-meta"><span>120 秒一局</span><i></i><span>单人 × AI</span><i></i><span>完全离线</span></div>
+      <button class="text-button" id="howto-open">第一次来？30 秒学会入梦 <span>↗</span></button>
+    </section>
+    <div class="room-caption" aria-hidden="true"><span class="caption-cross">+</span><div><span>实验室 A—01</span><small>MIRRORED CHAMBER / 16 × 15 M</small></div><span class="live-dot"></span></div>
+    <footer class="menu-footer">
+      <div class="dream-note">“我知道你在，<br>只是还不知道你在哪。”</div>
+      <div class="principles">
+        <div><span class="principle-number">01</span><p>读懂残影<small>屏幕上没有人，只有痕迹</small></p></div>
+        <div><span class="principle-number">02</span><p>向地图开枪<small>落点直达对面的房间</small></p></div>
+        <div><span class="principle-number">03</span><p>开枪后换位<small>你的枪声，也在暴露你</small></p></div>
+      </div>
+      <div class="build-mark">A DREAM, MADE PLAYABLE.<span>VOL. 01 / 2026</span></div>
+    </footer>
+  </main>
+
+  <section id="hud" class="hud hidden" aria-label="对战状态">
+    <div class="scoreboard">
+      <div class="score-side own"><div><span class="status-light"></span>你 <small>A—01</small></div><div class="score-health"><i id="own-top-bar"></i></div></div>
+      <div class="clock-block"><span class="round-label">镜像对决</span><strong id="clock">02:00</strong><span id="match-phase">寻找声源</span></div>
+      <div class="score-side opponent"><div>对方 <small>B—02</small><span id="enemy-hp">100</span></div><div class="score-health"><i id="enemy-top-bar"></i></div></div>
+    </div>
+    <div class="match-objective" id="match-objective">击败对方，或在 120 秒结束时拥有更多生命</div>
+    <div class="field-note"><i></i><span id="field-note">信号接收中</span><small>REMOTE / B—02</small></div>
+    <div id="crosshair" class="crosshair"><span></span><i></i><b></b></div>
+    <div id="target-label" class="target-label">瞄准巨幕中的地图</div>
+    <div id="hit-marker" aria-hidden="true"><i></i><i></i><i></i><i></i><span id="hit-damage"></span></div>
+    <div id="warning" class="warning hidden"><span class="warning-icon">!</span><span>落弹预警<small>立刻移动</small></span><b id="warning-direction">↓</b></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="first-hint" class="first-hint"><span class="hint-step">01 / 03</span><p>移动鼠标，找巨幕上的<span>模糊残影</span>。</p><small>W A S D 移动 · 鼠标转向</small></div>
+    <div class="bottom-hud">
+      <div class="vitals">
+        <div class="panel-label"><span class="plus-icon">+</span> 生命体征 <small>VITALS</small></div>
+        <div class="vital-value"><strong id="player-hp">100</strong><span>/ 100</span><b id="boost-label" class="hidden">逃生加速 ↑</b></div>
+        <div class="health-segments" id="health-segments"></div>
+        <div id="exposure" class="exposure"><span class="exposure-dot"></span><span id="exposure-label">低声活动</span><span id="exposure-level">LOW SIGNAL</span></div>
+      </div>
+      <div class="equipment">
+        <div class="ammo-panel"><div class="weapon-identifier"><span>相位手枪</span><small>PHASE / P—06</small></div><div class="ammo-count"><strong id="ammo-value">06</strong><span>/ 06</span></div><div class="ammo-pips" id="ammo-pips"></div><div class="reload-label" id="reload-label"><kbd>R</kbd> 换弹</div></div>
+        <div class="skills"><button id="scan-button" class="skill-button"><kbd>E</kbd><span>侦测脉冲<small id="scan-status">就绪 · 瞄准地图释放</small></span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/></svg><i id="scan-cooldown"></i></button><button id="decoy-button" class="skill-button"><kbd>Q</kbd><span>延迟伪声<small id="decoy-status">就绪 · 原地留下诱饵</small></span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8v8m4-12v16m5-13v10m5-13v16m4-12v8"/></svg><i id="decoy-cooldown"></i></button></div>
+      </div>
+      <div class="position-panel"><div class="panel-label">我的房间 <small>A—01</small></div><canvas id="local-map" width="200" height="160" aria-label="只显示自己位置的本房间导航图"></canvas><div class="coordinates" id="coordinates">X 0.0 · Z 11.8</div></div>
+    </div>
+    <div class="controls-strip"><span><kbd>WASD</kbd> 移动</span><span id="look-control">鼠标 转向</span><span><kbd>左键</kbd> 开枪</span><span id="aim-control"><kbd>右键</kbd> 精瞄</span><span><kbd>Shift</kbd> 疾跑</span><span><kbd>C</kbd> 静步</span><span><kbd>Esc</kbd> 暂停</span></div>
+  </section>
+
+  <div id="pause-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+    <section class="modal pause-card"><div class="modal-overline">DREAM SUSPENDED</div><h2 id="pause-title">梦，还在这里。</h2><p>对局已暂停。慢慢呼吸，他也不能动。</p><button class="primary-button" id="resume-button">继续梦境 <span>→</span></button><button class="secondary-button" id="pause-settings">调整设置</button><button class="text-button" id="return-menu">离开这一局</button><div class="modal-note">鼠标会在继续时重新锁定 · Esc 随时暂停</div></section>
+  </div>
+
+  <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <section class="modal settings-card"><button class="modal-close icon-button" id="settings-close" aria-label="关闭设置">×</button><div class="modal-overline">MAKE YOURSELF AT HOME</div><h2 id="settings-title">调整梦境</h2>
+      <label class="setting-row"><span>对手强度<small>下局生效。所有难度均只根据痕迹推断。</small></span><select id="difficulty"><option value="lucid">初次入梦 · 轻松</option><option value="standard" selected>浅层梦境 · 标准</option><option value="nightmare">深层梦境 · 困难</option></select></label>
+      <label class="setting-row"><span>鼠标灵敏度<small>较低灵敏度更容易瞄准微小声纹</small></span><div class="range-setting"><input id="sensitivity" type="range" min="0.4" max="2" step="0.05" value="1"><output id="sensitivity-value">1.00</output></div></label>
+      <label class="setting-row"><span>声音<small>建议戴耳机，远处的脚步有方向</small></span><div class="range-setting"><input id="volume" type="range" min="0" max="1" step="0.05" value="0.55"><output id="volume-value">55%</output></div></label>
+      <label class="setting-row"><span>视角控制<small>触控板模式：自由瞄准，右键拖动转向</small></span><select id="input-mode"><option value="locked">经典 FPS · 锁定鼠标</option><option value="free">触控板 · 自由指针</option></select></label>
+      <label class="setting-row"><span>画面质量<small>节能模式降低像素密度，保留全部场景</small></span><select id="quality"><option value="high">细腻</option><option value="low">节能</option></select></label>
+      <label class="setting-row toggle-row"><span>减少镜头晃动<small>降低走路起伏与受击震动</small></span><input id="reduce-motion" type="checkbox" role="switch"><span class="toggle-display" aria-hidden="true"></span></label>
+      <button id="settings-done" class="primary-button">保存，回到梦里 <span>↗</span></button><div class="modal-note">设置仅保存在此浏览器 · 无任何数据上传</div>
+    </section>
+  </div>
+
+  <div id="howto-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="howto-title">
+    <section class="modal howto-card"><button class="modal-close icon-button" id="howto-close" aria-label="关闭玩法介绍">×</button><div class="modal-overline">THIRTY SECONDS BEFORE THE DREAM</div><h2 id="howto-title">不是比谁快。是比谁先猜到。</h2><div class="howto-grid"><article><div class="instruction-art echo-art"><i></i><i></i><i></i></div><span>01 / 观察</span><h3>他不在屏幕上。<br>他的痕迹在。</h3><p>巨幕是对方房间的俯视图。模糊光团是枪声，淡淡拖影是脚步。残影不是他此刻的位置。</p></article><article><div class="instruction-art aim-art"><i></i><b>−34</b></div><span>02 / 预判</span><h3>朝地图开枪，<br>子弹去对面。</h3><p>对准残影前进的方向开火。直击 34 伤害，擦伤 18。弹丸约半秒后抵达，三次直击即可取胜。</p></article><article><div class="instruction-art move-art"><i></i><b>↗</b></div><span>03 / 换位</span><h3>扣动扳机后，<br>别站在原地。</h3><p>枪声会暴露你的开火位置。WASD 换位，C 静步。红色预警出现时立即躲开；受击后会短暂加速。</p></article></div><div class="skill-explainer"><p><kbd>E</kbd><span><strong>侦测脉冲</strong>瞄准地图扫描一小片区域；空区显示“空”。14 秒冷却。</span></p><p><kbd>Q</kbd><span><strong>延迟伪声</strong>原地留下诱饵，1.3 秒后发出假脚步。放下就走。20 秒冷却。</span></p></div><div class="win-rule"><strong>120 秒，活着读懂他。</strong><span>生命归零即失败；到时生命更多者获胜，相同则平局。</span></div><button id="howto-play" class="primary-button">懂了，进入梦境 <span>→</span></button></section>
+  </div>
+
+  <div id="result-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <section class="modal result-card"><div class="result-symbol" id="result-symbol">◎</div><div class="modal-overline" id="result-overline">CONNECTION CLOSED / YOU SURVIVED</div><h2 id="result-title">你读懂了他的沉默。</h2><p id="result-description">对面的声纹消失了。你的梦，还在继续。</p><div class="result-health"><span>你 <b id="result-own-hp">100</b></span><span id="result-reason">对手生命归零</span><span>对方 <b id="result-enemy-hp">0</b></span></div><div class="result-stats"><div><strong id="stat-hits">0%</strong><span>命中率</span></div><div><strong id="stat-damage">0</strong><span>造成伤害</span></div><div><strong id="stat-dodges">0</strong><span>擦肩而过</span></div><div><strong id="stat-time">0:00</strong><span>梦境时长</span></div></div><div class="result-tip" id="result-tip">残影是过去的位置，而不是现在的答案。</div><button id="replay-button" class="primary-button">再入梦一次 <span>↻</span></button><button id="result-menu" class="text-button">先醒一会儿</button><div class="modal-note" id="record-summary">本地记录</div></section>
+  </div>
+
+  <div id="error-modal" class="modal-backdrop hidden" role="alert"><section class="modal"><div class="modal-overline">SIGNAL INTERRUPTED</div><h2>房间暂时无法显现</h2><p id="error-message">浏览器未能启动 WebGL。请在 Safari 或 Chrome 中开启硬件加速，然后重新打开此文件。</p><button class="primary-button" id="retry-button">重新连接 <span>↻</span></button></section></div>
+  <div id="device-notice" class="device-notice">这场梦需要键盘与鼠标。请用 MacBook 或桌面浏览器打开，横屏体验更好。</div>
+  <noscript><div class="no-script">请启用浏览器 JavaScript，以进入这场完全离线的梦。</div></noscript>
+  <script src="src/simulation.js"></script>
+  <script src="src/tactical.js"></script>
+  <script src="src/renderer.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>

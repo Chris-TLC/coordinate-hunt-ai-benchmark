@@ -1,0 +1,1746 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17231f">
+  <meta name="description" content="盲区：一个关于看不见的对手的梦。原生 3D、完全离线、120 秒第一人称心理对决。">
+  <title>盲区 BLINDSPOT — 看不见，不代表不在。</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231c3028'/%3E%3Cpath d='M14 24V14h10m16 0h10v10m0 16v10H40m-16 0H14V40' fill='none' stroke='%23c4d4af' stroke-width='3'/%3E%3Ccircle cx='32' cy='32' r='7' fill='none' stroke='%23c4d4af' stroke-width='3'/%3E%3C/svg%3E">
+  <style>
+:root{color-scheme:dark;--ink:#ecede1;--muted:#a1ad9e;--dim:#738478;--mint:#c4d4af;--accent:#b8d1ad;--line:rgba(210,224,195,.16);--panel:#1a2723;--red:#d68669;--font:-apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;--mono:"SFMono-Regular",Consolas,"Liberation Mono",monospace;--serif:"Songti SC","STSong","Noto Serif CJK SC",serif}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#17231f;color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased}button,input,select{font:inherit}button,a,input,select{-webkit-tap-highlight-color:transparent}button{color:inherit;cursor:pointer}button{border:0}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #dbe8be;outline-offset:5px}button:disabled{cursor:not-allowed;opacity:.45}a{color:inherit;text-decoration:none}button,select,input{touch-action:manipulation}.hidden{display:none!important}#world{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none}.atmosphere{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 57% 45%,transparent 26%,rgba(8,17,13,.35) 100%);z-index:1}body[data-state=menu] .atmosphere{background:linear-gradient(90deg,rgba(13,25,20,.97) 0%,rgba(17,30,23,.91) 22%,rgba(18,30,24,.65) 38%,rgba(17,26,21,.03) 65%),linear-gradient(0deg,rgba(13,22,18,.9),transparent 27%,transparent 86%,rgba(13,22,18,.34))}.topbar{position:fixed;inset:0 0 auto;z-index:12;padding:30px 3.45vw;display:flex;align-items:center;justify-content:space-between;pointer-events:none}.topbar>*{pointer-events:auto}.wordmark{display:flex;gap:13px;align-items:center;font-size:20px;font-weight:600;letter-spacing:3px}.brand-icon{width:30px;height:30px;stroke:#ced9bb;stroke-width:1.6}.wordmark small{font-family:var(--mono);font-size:9px;letter-spacing:2.2px;display:block;margin-top:3px;color:#a6b49d}.header-center{position:absolute;left:50%;transform:translateX(-50%);font-family:var(--serif);letter-spacing:3px;font-size:13px;color:#acb6a3}.header-actions{display:flex;align-items:center;gap:12px}.offline-label{font-family:var(--mono);font-size:10px;letter-spacing:1.2px;color:#c0c9b7;display:flex;align-items:center;gap:8px;margin-right:13px}.offline-label i,.live-dot,.status-light{width:5px;height:5px;border-radius:50%;background:#bacba2;display:inline-block;box-shadow:0 0 9px #b9d19f44}.slash{margin:0 3px;color:#728372}.icon-button{height:36px;width:36px;border:1px solid var(--line);border-radius:50%;background:#1d2b232e;display:grid;place-items:center;transition:background .2s,border-color .2s}.icon-button:hover{background:#c7d3b317;border-color:#b7c9a755}.icon-button svg{width:18px;height:18px;stroke:#ced5c0;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round}.mute-line{display:none}.muted .sound-waves{display:none}.muted .mute-line{display:block}body[data-state=menu] .in-game{display:none}.menu-layer{position:fixed;inset:0;z-index:4}.hero{position:absolute;left:7.1vw;top:17.5%;width:355px}.edition{display:flex;align-items:center;gap:12px;font-size:10px;letter-spacing:3px;color:#bdc8b0;margin-bottom:24px}.small-line{width:26px;height:1px;background:#adbe98}.hero h1{font-family:var(--serif);font-weight:400;font-size:clamp(80px,7.7vw,120px);line-height:1.07;margin:0 0 28px;letter-spacing:16px;color:#e1e6cf;text-shadow:0 3px 35px #bdd29e10}.hero h1 span{display:block;font:10px var(--mono);letter-spacing:9.5px;margin:16px 0 0 5px;color:#acb79e}.hero h2{font-family:var(--serif);font-size:clamp(25px,2.2vw,36px);font-weight:400;line-height:1.58;letter-spacing:2px;margin:0 0 20px}.hero-description{font-size:12px;line-height:2.05;color:#a9b59f;margin:0 0 31px;letter-spacing:.4px}.primary-button{display:flex;width:100%;min-height:58px;align-items:center;justify-content:space-between;background:var(--mint);color:#26372b;padding:17px 22px;font-size:15px;font-weight:500;letter-spacing:1px;transition:background .2s,transform .2s,box-shadow .2s;border:1px solid transparent}.primary-button:hover{background:#d8e2c3;transform:translateY(-1px);box-shadow:0 6px 30px #c2d7a816}.primary-button:active{transform:translateY(1px)}.primary-button svg{width:25px;height:25px;stroke:#364533;stroke-width:1.3}.button-name{display:flex;align-items:center;gap:18px}.button-name small{font-size:10px;letter-spacing:.5px;font-weight:400;color:#56654c}.start-meta{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;font-size:9px;letter-spacing:1px;color:#a2b095}.start-meta i{width:2px;height:2px;background:#7e8e74;border-radius:50%}.text-button{background:none;padding:10px 0;font-size:11px;letter-spacing:.5px;color:#bdc8ad;transition:color .2s}.text-button:hover{color:#f0f1d8}.hero .text-button{margin-top:14px}.text-button span{margin-left:13px;font-size:15px}.room-caption{position:absolute;right:5.1vw;bottom:24%;display:flex;align-items:center;gap:13px;padding:15px 0 15px 20px;border-left:1px solid #b5c5a554;text-shadow:0 2px 12px #000}.caption-cross{font:28px var(--mono);font-weight:200;color:#b6c8a6}.room-caption>div>span{font-size:11px;letter-spacing:2px}.room-caption small{display:block;font:8px var(--mono);letter-spacing:1px;color:#aebca1;margin-top:7px}.live-dot{margin-left:13px;animation:breathe 3s ease-in-out infinite}.menu-footer{position:absolute;bottom:0;left:3.45vw;right:3.45vw;min-height:115px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:30px;padding:25px 0}.dream-note{font-family:var(--serif);font-size:12px;color:#aebba2;line-height:1.9;letter-spacing:1px}.principles{display:flex;gap:42px}.principles>div{display:flex;align-items:flex-start;gap:15px}.principle-number{font:11px var(--mono);color:#829577;border:1px solid #90a38155;padding:6px;margin-top:3px}.principles p{margin:0;font-size:12px;letter-spacing:1px}.principles small{display:block;margin-top:8px;color:#8c9d83;font-size:10px;letter-spacing:.3px}.build-mark{font:8px var(--mono);color:#a3b095;line-height:1.8;text-align:right;letter-spacing:1px}.build-mark span{display:block;color:#6f8269;margin-top:5px}.hud{position:fixed;inset:0;z-index:5;pointer-events:none}.hud button{pointer-events:auto}.scoreboard{position:absolute;top:28px;left:50%;transform:translateX(-50%);display:flex;align-items:flex-start;gap:28px}.score-side{width:126px;margin-top:13px}.score-side>div:first-child{display:flex;gap:7px;align-items:center;font-size:11px;font-weight:500;color:#d5ddc5}.score-side small{font:9px var(--mono);color:#98a78b;margin-left:auto}.score-side.opponent small{margin-left:0}.score-side.opponent #enemy-hp{margin-left:auto;font:11px var(--mono);color:#ddaf8c}.score-health{height:3px;margin-top:9px;background:#cdddc024}.score-health i{display:block;height:100%;background:#c6d8ad;transition:width .2s}.opponent .score-health i{background:#ca9679}.clock-block{text-align:center;width:100px}.round-label{font-size:8px;letter-spacing:3px;color:#b4c2a9}.clock-block strong{display:block;font-family:var(--mono);font-size:33px;font-weight:400;letter-spacing:-1px;line-height:1.22;color:#e4ead6;font-variant-numeric:tabular-nums}.clock-block>span:last-child{font-size:8px;letter-spacing:2px;color:#a8b99b}.clock-block.urgent strong{color:#e1a789}.match-objective{position:absolute;top:109px;left:50%;transform:translateX(-50%);font-size:10px;color:#d3dac3;letter-spacing:1px;text-shadow:0 2px 8px #000;opacity:.7;white-space:nowrap}.field-note{position:absolute;top:128px;left:3.45vw;display:flex;flex-wrap:wrap;align-items:center;gap:8px;max-width:180px;font-size:10px;letter-spacing:1px;color:#c6d4b9;text-shadow:0 2px 8px #000}.field-note i{width:4px;height:4px;background:#b6cda5;border-radius:50%}.field-note small{width:100%;margin-top:1px;font:8px var(--mono);letter-spacing:1.5px;color:#8fa687}.crosshair{position:absolute;left:50%;top:50%;width:20px;height:20px;transform:translate(-50%,-50%);opacity:.65;transition:opacity .12s;filter:drop-shadow(0 1px 1px #0009)}.crosshair span{position:absolute;inset:8px;border:1px solid #dae7c4;border-radius:50%}.crosshair:before,.crosshair:after,.crosshair i:before,.crosshair i:after{content:"";position:absolute;background:#e9eed4}.crosshair:before{width:5px;height:1px;left:0;top:10px}.crosshair:after{width:5px;height:1px;right:0;top:10px}.crosshair i:before{width:1px;height:5px;left:10px;top:0}.crosshair i:after{width:1px;height:5px;left:10px;bottom:0}.crosshair.on-target{opacity:1}.crosshair.blocked{filter:sepia(1) saturate(3)}.crosshair.on-target b{position:absolute;inset:-5px;border:1px solid #c0d6a549;border-radius:50%}.target-label{position:absolute;top:calc(50% + 29px);left:50%;transform:translateX(-50%);font:8px var(--mono);letter-spacing:1px;color:#d4dfc2;text-shadow:0 1px 5px #0009;white-space:nowrap}.target-label.off-map{color:#b8c3aa;font-family:var(--font);font-size:10px;opacity:.7}.bottom-hud{position:absolute;left:3.45vw;right:3.45vw;bottom:57px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;filter:drop-shadow(0 2px 12px #0b1b14)}.vitals{width:205px;background:linear-gradient(90deg,#17241a69,transparent);padding:8px 0}.panel-label{font-size:10px;letter-spacing:1px;display:flex;align-items:center;gap:6px;color:#d2dcc1}.panel-label small{font:8px var(--mono);letter-spacing:1px;color:#8ca37e;margin-left:auto}.plus-icon{font-size:18px;font-weight:300;line-height:12px;margin-right:3px}.vital-value{display:flex;align-items:baseline;gap:7px;margin-top:7px}.vital-value strong{font:44px var(--mono);line-height:1.2;letter-spacing:-2px;color:#e1ebcd}.vital-value>span{font:10px var(--mono);color:#91a480}.vital-value b{font-size:9px;color:#d4dfaf;font-weight:400;margin-left:auto}.health-segments{display:flex;gap:3px;margin-top:4px}.health-segments i{height:4px;flex:1;background:#c5d5a9;transition:opacity .2s}.health-segments i.empty{opacity:.15}.exposure{margin-top:13px;display:flex;align-items:center;gap:6px;font-size:9px;color:#afbba1}.exposure-dot{width:4px;height:4px;border-radius:50%;background:#c1d49f}.exposure>span:last-child{font:7px var(--mono);margin-left:auto;color:#829576}.exposure.loud{color:#edba8d}.exposure.loud .exposure-dot{background:#e8ae79;box-shadow:0 0 8px #d7965577}.exposure.loud>span:last-child{color:#c8a481}.equipment{width:368px;margin-bottom:0}.ammo-panel{display:flex;align-items:center;gap:14px;padding:0 6px 14px}.weapon-identifier>span{font-size:11px;letter-spacing:1px}.weapon-identifier small{font:7px var(--mono);display:block;color:#9eaf8b;letter-spacing:1px;margin-top:6px}.ammo-count{display:flex;align-items:baseline;gap:5px;margin-left:auto}.ammo-count strong{font:34px var(--mono);letter-spacing:-1px}.ammo-count>span{font:9px var(--mono);color:#8d9f7c}.ammo-pips{display:flex;gap:3px}.ammo-pips i{width:3px;height:17px;background:#c4d3ab}.ammo-pips i.empty{background:#c4d3ab27}.reload-label{display:flex;align-items:center;gap:6px;font-size:9px;color:#bdc8ac}.skills{display:flex;gap:8px}.skill-button{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;padding:12px 13px;flex:1;min-width:0;border:1px solid #aec49b39;background:#15261b99;text-align:left;backdrop-filter:blur(8px)}.skill-button:hover{background:#33432a99;border-color:#c2d6aa80}.skill-button>span{font-size:10px;letter-spacing:.5px;white-space:nowrap}.skill-button small{display:block;font-size:7px;color:#9bb18a;margin-top:5px;letter-spacing:0}.skill-button>svg{width:19px;height:19px;stroke:#bccaa5;stroke-width:1;margin-left:auto;flex-shrink:0}.skill-button>i{position:absolute;bottom:0;left:0;height:2px;background:#bdd1a8;transition:width .12s;width:100%}.skill-button.cooling{opacity:.6}.skill-button.cooling>i{background:#819575}.position-panel{width:138px;opacity:.87}.position-panel .panel-label{font-size:9px}#local-map{display:block;width:138px;height:110px;margin:7px 0 0}.coordinates{font:8px var(--mono);letter-spacing:1px;color:#8ca07c;text-align:center;margin-top:4px}.controls-strip{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:19px;align-items:center;white-space:nowrap;font-size:8px;letter-spacing:.3px;color:#a3b090}.controls-strip span{display:flex;align-items:center;gap:5px}kbd{font-family:var(--mono);font-size:9px;display:inline-grid;place-items:center;min-width:19px;height:19px;line-height:19px;padding:0 4px;border:1px solid #b4c2a24a;background:#26352549;color:#d3debe;border-radius:2px;box-shadow:0 1px 1px #0002}.toast{position:absolute;left:50%;bottom:230px;transform:translate(-50%,10px);font-size:11px;letter-spacing:.7px;line-height:1.8;padding:10px 19px;background:#1b2c2199;border:1px solid #c0d6a32b;backdrop-filter:blur(8px);color:#d5dfbf;opacity:0;transition:opacity .2s,transform .2s;max-width:min(520px,80vw);text-align:center}.toast.visible{opacity:1;transform:translate(-50%,0)}.toast.danger{border-color:#c7865644;color:#e5bc95}.first-hint{position:absolute;left:50%;bottom:240px;transform:translateX(-50%);text-align:center;padding:15px 25px;background:linear-gradient(90deg,transparent,#192a208a,transparent);width:430px}.hint-step{font:8px var(--mono);letter-spacing:2px;color:#a9bc93}.first-hint p{font-size:13px;letter-spacing:1px;margin:9px 0;color:#d9e0c7}.first-hint p>span{color:#e2cf9d}.first-hint small{font-size:9px;color:#a5b892;letter-spacing:1px}.warning{position:absolute;right:4.7vw;top:39%;display:flex;align-items:center;gap:11px;color:#edb18d;padding:13px 18px;background:#3a251f9c;border:1px solid #d58e6469;box-shadow:0 0 30px #c4653420;animation:warning .4s ease-in-out infinite}.warning-icon{width:26px;height:26px;border:1px solid #d9946d;border-radius:50%;display:grid;place-items:center;font:16px var(--mono)}.warning>span:nth-child(2){font-size:12px;letter-spacing:2px}.warning small{display:block;margin-top:5px;font-size:9px;letter-spacing:1px;color:#c29a7d}.warning b{font-size:29px;margin-left:5px;font-weight:300}#damage-overlay,#incoming-overlay,#scan-overlay{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:0}#damage-overlay{background:radial-gradient(ellipse,transparent 34%,#93483062 72%,#ab44299e 100%);box-shadow:inset 0 0 60px #ad3f3855}#incoming-overlay{background:linear-gradient(0deg,#d58a4c48,transparent 18%,transparent 82%,#d58a4c3d)}#scan-overlay{background:radial-gradient(ellipse,transparent 45%,#a1dcb229)}#hit-marker{position:absolute;left:50%;top:50%;width:34px;height:34px;transform:translate(-50%,-50%);opacity:0}#hit-marker i{position:absolute;width:9px;height:2px;background:#f0cf92;box-shadow:0 0 7px #ddb76277}#hit-marker i:nth-child(1){left:0;top:4px;transform:rotate(45deg)}#hit-marker i:nth-child(2){right:0;top:4px;transform:rotate(-45deg)}#hit-marker i:nth-child(3){left:0;bottom:4px;transform:rotate(-45deg)}#hit-marker i:nth-child(4){right:0;bottom:4px;transform:rotate(45deg)}#hit-damage{position:absolute;left:41px;top:3px;font:19px var(--mono);color:#ebc78e}.modal-backdrop{position:fixed;inset:0;z-index:30;background:#0c1915aa;backdrop-filter:blur(9px);display:flex;align-items:center;justify-content:center;padding:30px;overflow:auto;animation:appear .2s ease-out}.modal{position:relative;width:min(470px,100%);padding:42px;background:linear-gradient(135deg,#26352b,#1b2922);border:1px solid #b5c9a137;box-shadow:0 35px 100px #0003}.modal-overline{font:8px var(--mono);letter-spacing:2px;color:#95aa83;margin-bottom:20px}.modal h2{font-family:var(--serif);font-size:30px;font-weight:400;letter-spacing:1px;line-height:1.5;margin:0 0 15px;color:#e2e8d0}.modal>p{font-size:12px;line-height:1.9;color:#a4b49a;margin:0 0 30px}.modal .primary-button{margin-top:22px;font-size:13px;min-height:53px}.modal .secondary-button{margin-top:10px;width:100%;padding:15px;background:#c6d5ae09;border:1px solid var(--line);font-size:12px;color:#cbd6ba}.secondary-button:hover{background:#c6d5ae15}.modal>.text-button{display:block;width:100%;text-align:center;margin-top:14px}.modal-note{font-size:8px;letter-spacing:.5px;color:#7f9573;text-align:center;margin-top:23px;line-height:1.8}.modal-close{position:absolute;right:18px;top:18px;font-size:25px;font-weight:200}.settings-card{width:560px;padding:35px 36px 29px}.settings-card h2{margin-bottom:22px;font-size:28px}.setting-row{position:relative;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 0;border-top:1px solid var(--line);font-size:12px}.setting-row>span:first-child{letter-spacing:.5px}.setting-row small{display:block;font-size:9px;line-height:1.7;letter-spacing:0;color:#879c7c;margin-top:6px;max-width:260px}.setting-row select{font-size:10px;border:1px solid #9db88c44;background:#1b2b21;color:#c8d4b4;padding:10px 9px;max-width:185px;border-radius:1px}.range-setting{display:flex;gap:10px;align-items:center}.range-setting input{width:105px;accent-color:#c0d1a3;height:3px}.range-setting output{font:9px var(--mono);color:#c8d6b6;min-width:35px;text-align:right}.toggle-row input{position:absolute;right:0;opacity:0;width:38px;height:25px;z-index:2;cursor:pointer}.toggle-display{position:relative;width:34px;height:18px;flex-shrink:0;border:1px solid #95ab7d55;border-radius:20px;background:#1b2920}.toggle-display:after{content:"";position:absolute;left:3px;top:3px;height:10px;width:10px;border-radius:50%;background:#788e6c;transition:transform .2s,background .2s}.toggle-row input:checked+.toggle-display{background:#879e6430}.toggle-row input:checked+.toggle-display:after{transform:translateX(15px);background:#c8d8ac}.toggle-row input:focus-visible+.toggle-display{outline:2px solid #dbe8be;outline-offset:4px}.howto-card{width:min(880px,100%);padding:38px}.howto-card h2{font-size:27px}.howto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:29px;margin:23px 0}.howto-grid article+article{border-left:1px solid var(--line);padding-left:27px}.howto-grid article>span{font:9px var(--mono);letter-spacing:1px;color:#aec198}.howto-grid h3{font-family:var(--serif);font-weight:400;font-size:19px;line-height:1.7;margin:11px 0}.howto-grid p{font-size:10px;line-height:1.95;color:#a5b698;margin:0}.instruction-art{height:85px;position:relative;margin-bottom:18px;overflow:hidden;background:linear-gradient(#9cae7710 1px,transparent 1px),linear-gradient(90deg,#9cae7710 1px,transparent 1px);background-size:16px 16px;border:1px solid #9cae7722}.echo-art i{position:absolute;border-radius:50%;background:radial-gradient(#d7c08f88,#d7c08f33 35%,transparent 72%);width:72px;height:72px;left:35%;top:9px}.echo-art i:nth-child(2){width:60px;height:34px;left:13%;top:42px;opacity:.7;transform:rotate(-17deg)}.echo-art i:nth-child(3){width:85px;height:10px;left:23%;top:44px;transform:rotate(-16deg)}.aim-art i{position:absolute;left:42%;top:22%;width:42px;height:42px;border:1px solid #d4dcb47d;border-radius:50%}.aim-art i:before,.aim-art i:after{content:"";position:absolute;background:#d4dcb4;left:50%;top:50%;transform:translate(-50%,-50%)}.aim-art i:before{width:60px;height:1px}.aim-art i:after{height:60px;width:1px}.aim-art b{position:absolute;left:70%;top:15%;font:17px var(--mono);color:#d9b88e}.move-art i{position:absolute;left:24%;top:38%;width:42px;height:28px;transform:rotate(-22deg);border:1px dashed #cf9e75;border-radius:50%}.move-art b{position:absolute;left:55%;top:4%;font-size:57px;color:#bbd3a4;font-weight:200}.skill-explainer{border-top:1px solid var(--line);padding-top:11px;display:flex;gap:27px}.skill-explainer p{display:flex;gap:10px;align-items:center;font-size:10px;line-height:1.8;color:#9fb18f;flex:1}.skill-explainer strong{display:block;color:#c3d1ae;font-size:11px;font-weight:500;margin-bottom:3px}.skill-explainer kbd{flex-shrink:0;width:27px;height:27px}.win-rule{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-top:15px;padding:15px;background:#a7bd8422;font-size:10px}.win-rule strong{font-size:12px;font-weight:500;color:#d8e0c2;white-space:nowrap}.win-rule>span{color:#a8b998;line-height:1.6}.result-card{text-align:center;width:550px;padding:38px 42px 30px}.result-symbol{font-size:48px;line-height:1.2;font-weight:200;color:#c5d5aa;margin-bottom:20px}.result-card .modal-overline{font-size:7px;margin-bottom:14px}.result-card h2{font-size:31px}.result-card>p{font-size:11px;margin-bottom:24px}.result-health{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:10px;color:#afbf9c}.result-health b{font:18px var(--mono);margin-left:9px;color:#cad9b1}.result-health>span:nth-child(2){font-size:9px;color:#93a780}.result-health>span:last-child b{color:#cba78c}.result-stats{display:grid;grid-template-columns:repeat(4,1fr);margin:27px 0 24px}.result-stats strong{display:block;font:26px var(--mono);color:#d7e1bf}.result-stats span{display:block;font-size:9px;color:#92a980;margin-top:9px}.result-stats>div+div{border-left:1px solid var(--line)}.result-tip{padding:14px 12px;font-size:10px;line-height:1.8;background:#acc98c09;color:#afbf9a;border-left:2px solid #9fb68355;text-align:left}.result-card.lost .result-symbol{color:#c9a48b}.result-card.lost h2{color:#d8c8b1}.device-notice{position:fixed;bottom:0;left:0;right:0;z-index:50;background:#293829f5;padding:10px 20px;text-align:center;font-size:11px;line-height:1.7;color:#d6dfc3;display:none}.no-script{position:fixed;inset:0;display:grid;place-items:center;z-index:100;background:#17231f;padding:30px}body[data-state=playing] .header-center,body[data-state=paused] .header-center,body[data-state=result] .header-center{display:none}body[data-state=playing] .offline-label,body[data-state=paused] .offline-label,body[data-state=result] .offline-label{display:none}body.pointer-locked #world{cursor:none}body.free-pointer #world{cursor:none}body.reduce-motion *,body.reduce-motion *:before,body.reduce-motion *:after{animation:none!important}.low-health #player-hp{color:#e1a78a}.low-health .health-segments i{background:#d39a79}@keyframes breathe{50%{opacity:.3;box-shadow:none}}@keyframes warning{50%{border-color:#f2b889aa}}@keyframes appear{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.skill-button.armed{background:#607d4d66;border-color:#d0dfa5}.skills .skill-button small{font-size:8px}.controls-strip{font-size:9px}
+@media(min-width:1600px){.hero{top:18%;width:390px}.hero h1{font-size:126px}.hero h2{font-size:37px}.hero-description{font-size:13px}.menu-footer{min-height:137px}.principles{gap:64px}.room-caption{bottom:23%}}
+@media(max-height:780px){.hero{top:16.8%;width:326px}.edition{margin-bottom:17px}.hero h1{font-size:85px;margin-bottom:23px}.hero h1 span{margin-top:10px}.hero h2{font-size:28px;margin-bottom:13px}.hero-description{margin-bottom:23px;font-size:11px}.hero .text-button{margin-top:9px}.menu-footer{min-height:96px;padding:20px 0}.room-caption{bottom:23%}.settings-card{padding:26px 33px}.settings-card .modal-overline{margin-bottom:10px}.settings-card h2{margin-bottom:14px}.setting-row{padding:13px 0}.modal-note{margin-top:17px}.modal .primary-button{margin-top:18px}.topbar{padding-top:25px}.bottom-hud{bottom:49px}.toast{bottom:215px}.first-hint{bottom:220px}.howto-card{padding:28px 34px}.howto-grid{margin:18px 0}.instruction-art{height:70px;margin-bottom:12px}.howto-grid h3{font-size:18px;margin:8px 0}.modal h2{font-size:27px}.result-card{padding-top:29px}.result-symbol{margin-bottom:14px;font-size:41px}}
+@media(max-width:1100px){.header-center{display:none}.hero{left:6%;width:320px}.hero h1{font-size:90px}.hero h2{font-size:28px}.principles{gap:25px}.principles>div{gap:10px}.principles small{font-size:8px}.dream-note{font-size:10px}.build-mark{display:none}.room-caption{right:4%;bottom:23%;opacity:.8}.scoreboard{gap:15px}.score-side{width:99px}.equipment{width:340px}.vitals{width:180px}.position-panel{width:115px}#local-map{width:115px;height:92px}.controls-strip{gap:12px;font-size:7px}.skill-button{padding:11px 10px;gap:8px}.skill-button svg{width:16px}.first-hint{font-size:11px}.offline-label{font-size:9px}.menu-footer{gap:18px}}
+@media(max-height:640px){.topbar{padding-top:18px}.hero{top:16%;width:303px}.edition{font-size:8px;margin-bottom:11px}.hero h1{font-size:65px;margin-bottom:17px}.hero h1 span{font-size:8px;letter-spacing:7px;margin-top:6px}.hero h2{font-size:24px;margin-bottom:10px}.hero-description{font-size:10px;margin-bottom:17px}.primary-button{min-height:48px;padding:13px 18px}.hero .text-button{font-size:9px;margin-top:5px}.start-meta{margin-top:9px;font-size:8px}.menu-footer{min-height:79px;padding:16px 0}.principles p{font-size:10px}.principles small{font-size:8px}.dream-note{font-size:9px}.bottom-hud{bottom:39px}.vital-value strong{font-size:33px}.equipment{width:320px}.ammo-panel{padding-bottom:9px}.ammo-count strong{font-size:28px}.skill-button{padding:9px 10px}.position-panel{width:105px}#local-map{width:105px;height:84px}.controls-strip{bottom:13px}.toast{bottom:180px}.first-hint{bottom:181px;padding:10px 20px}.scoreboard{top:18px}.match-objective{top:94px}.field-note{top:111px}.modal-backdrop{padding:16px}.modal{max-height:calc(100vh - 32px);overflow-y:auto}.settings-card{padding:22px 32px}.setting-row{padding:10px 0}.settings-card .modal-overline{font-size:7px}.settings-card h2{font-size:25px;margin-bottom:9px}.setting-row small{font-size:8px;margin-top:4px}.result-stats{margin:18px 0}.result-symbol{font-size:30px;margin-bottom:10px}.result-card>p{margin-bottom:18px}.result-card h2{font-size:25px}.howto-grid{gap:20px;margin:12px 0}.howto-grid article+article{padding-left:18px}.instruction-art{height:50px}.howto-grid h3{font-size:15px}.howto-grid p{font-size:9px}.skill-explainer{padding-top:6px}.win-rule{margin-top:9px}.modal h2{margin-bottom:10px}}
+@media(max-width:760px){.topbar{padding:20px 22px}.offline-label{display:none}.wordmark{font-size:17px}.brand-icon{width:26px}.header-actions{gap:8px}.hero{left:7%;top:16%;width:310px}.hero h1{font-size:82px}.hero h2{font-size:27px}.room-caption{display:none}.menu-footer{left:7%;right:7%;bottom:20px;min-height:80px}.dream-note{display:none}.principles{gap:16px;width:100%;justify-content:space-between}.principles>div{gap:7px}.principle-number{font-size:8px;padding:4px}.principles small{max-width:100px;line-height:1.7;font-size:8px}.principles p{font-size:9px}.scoreboard{top:77px;gap:14px}.score-side{width:90px}.clock-block strong{font-size:27px}.clock-block{width:86px}.match-objective{top:151px;font-size:8px}.field-note{display:none}.bottom-hud{left:4%;right:4%;bottom:50px;gap:15px}.position-panel{display:none}.equipment{width:300px}.vitals{width:150px}.vital-value strong{font-size:32px}.vital-value b{font-size:7px}.controls-strip{gap:9px;font-size:7px;bottom:17px}.controls-strip span:nth-child(n+5){display:none}.ammo-pips{display:none}.weapon-identifier>span{font-size:10px}.skills{gap:6px}.skill-button{padding:9px;gap:6px}.skill-button small{font-size:6px}.skill-button>svg{display:none}.toast{bottom:200px;font-size:10px}.first-hint{bottom:201px;width:350px}.warning{right:5%;top:36%;padding:9px 12px}.howto-grid{gap:15px}.howto-grid article+article{padding-left:15px}.howto-card{padding:27px}.howto-card h2{font-size:22px}.howto-grid h3{font-size:16px}.skill-explainer{gap:16px}.skill-explainer p{font-size:9px}.win-rule{display:block}.win-rule>span{display:block;margin-top:7px}.settings-card{padding:30px 24px}.setting-row{gap:10px}.setting-row small{max-width:190px;font-size:8px}.setting-row select{max-width:150px;font-size:9px}.range-setting input{width:80px}.modal{padding:30px 25px}.modal-overline{font-size:7px}.modal h2{font-size:24px}.result-stats strong{font-size:23px}.result-stats span{font-size:8px}}
+@media(max-width:540px){.hero{width:285px;top:17%}.hero h1{font-size:86px}.hero h2{font-size:27px}.hero-description{font-size:10px}.principles{gap:10px}.principle-number{display:none}.principles p{font-size:10px}.principles small{max-width:85px}.menu-footer{bottom:24px}.device-notice{display:block;font-size:9px;padding:7px 13px}.header-actions{gap:6px}.icon-button{width:33px;height:33px}.wordmark small{font-size:7px}.howto-grid{display:block}.howto-grid article{display:grid;grid-template-columns:70px 1fr;gap:4px 15px;margin-bottom:20px}.howto-grid article+article{border:0;padding:0}.instruction-art{grid-row:1/4;width:70px;height:85px;margin:0}.howto-grid h3{margin:0;font-size:15px}.howto-grid h3 br{display:none}.howto-grid p{font-size:9px}.howto-grid article>span{font-size:8px}.skill-explainer{display:block}.settings-card{padding:28px 20px}.setting-row{font-size:11px}.setting-row select{max-width:140px}.setting-row small{max-width:160px}.range-setting input{width:64px}.range-setting{gap:6px}.range-setting output{font-size:8px;min-width:29px}.result-card h2{font-size:24px}.result-health{font-size:9px}.result-health>span:nth-child(2){font-size:8px}.bottom-hud{gap:15px;align-items:flex-end}.equipment{width:215px}.vitals{width:112px}.vitals .panel-label small{display:none}.vitals .panel-label{font-size:8px}.vital-value strong{font-size:29px}.vital-value>span{font-size:8px}.vital-value b{display:none}.exposure>span:last-child{display:none}.weapon-identifier small{font-size:6px}.weapon-identifier>span{font-size:9px}.ammo-count strong{font-size:28px}.ammo-panel{gap:8px;padding:0 0 10px}.reload-label{font-size:8px}.skill-button{gap:4px;padding:8px 6px}.skill-button>span{font-size:8px}.skill-button small{font-size:6px;max-width:73px;white-space:normal;line-height:1.4}.skill-button kbd{font-size:8px;min-width:17px}.controls-strip{bottom:37px}.bottom-hud{bottom:70px}.toast,.first-hint{bottom:219px}.scoreboard{gap:9px}.score-side{width:86px}.first-hint{width:320px}.first-hint p{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.live-dot,.warning{animation:none}}
+
+</style>
+</head>
+<body data-state="menu">
+  <canvas id="world" aria-label="第一人称的 16 米乘 15 米镜像对战房间" tabindex="-1"></canvas>
+  <div class="atmosphere" aria-hidden="true"></div>
+  <div id="damage-overlay" aria-hidden="true"></div>
+  <div id="incoming-overlay" aria-hidden="true"></div>
+  <div id="scan-overlay" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="wordmark" href="#" id="brand" aria-label="盲区，返回主界面">
+      <svg class="brand-icon" viewBox="0 0 40 40" fill="none" aria-hidden="true"><path d="M4 14V4h10m12 0h10v10m0 12v10H26m-12 0H4V26"/><circle cx="20" cy="20" r="6"/><path d="M20 0v8m0 24v8M0 20h8m24 0h8" opacity=".35"/></svg>
+      <span>盲区 <small>BLINDSPOT</small></span>
+    </a>
+    <div class="header-center" id="header-caption">看不见，不代表不在。</div>
+    <div class="header-actions">
+      <span class="offline-label"><i></i> 本地梦境 <span class="slash">/</span> 1 VS 1</span>
+      <button class="icon-button" id="sound-toggle" title="静音（M）" aria-label="关闭声音" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="mute-line" d="m16 9 5 6m0-6-5 6"/></svg></button>
+      <button class="icon-button" id="settings-open" title="设置" aria-label="打开设置"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M4 17h16"/><rect x="7" y="4" width="4" height="6" rx="1"/><rect x="14" y="14" width="4" height="6" rx="1"/></svg></button>
+      <button class="icon-button in-game" id="pause-open" title="暂停（Esc）" aria-label="暂停对局"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></button>
+    </div>
+  </header>
+
+  <main id="menu" class="menu-layer">
+    <section class="hero">
+      <div class="edition"><span class="small-line"></span> 梦境实验 · 第 001 号</div>
+      <h1>盲区<span>BLINDSPOT</span></h1>
+      <h2>你看不见他。<br>但他在那里。</h2>
+      <p class="hero-description">一间房，一面巨幕，一个看不见的对手。<br>循着回声猜他的位置。扣下扳机，然后离开。</p>
+      <button id="start-button" class="primary-button"><span class="button-name">进入梦境 <small>开始 1v1 对决</small></span><svg viewBox="0 0 28 28" fill="none" aria-hidden="true"><path d="M4 14h19M15 6l8 8-8 8"/></svg></button>
+      <div class="start-meta"><span>120 秒一局</span><i></i><span>单人 × AI</span><i></i><span>完全离线</span></div>
+      <button class="text-button" id="howto-open">第一次来？30 秒学会入梦 <span>↗</span></button>
+    </section>
+    <div class="room-caption" aria-hidden="true"><span class="caption-cross">+</span><div><span>实验室 A—01</span><small>MIRRORED CHAMBER / 16 × 15 M</small></div><span class="live-dot"></span></div>
+    <footer class="menu-footer">
+      <div class="dream-note">“我知道你在，<br>只是还不知道你在哪。”</div>
+      <div class="principles">
+        <div><span class="principle-number">01</span><p>读懂残影<small>屏幕上没有人，只有痕迹</small></p></div>
+        <div><span class="principle-number">02</span><p>向地图开枪<small>落点直达对面的房间</small></p></div>
+        <div><span class="principle-number">03</span><p>开枪后换位<small>你的枪声，也在暴露你</small></p></div>
+      </div>
+      <div class="build-mark">A DREAM, MADE PLAYABLE.<span>VOL. 01 / 2026</span></div>
+    </footer>
+  </main>
+
+  <section id="hud" class="hud hidden" aria-label="对战状态">
+    <div class="scoreboard">
+      <div class="score-side own"><div><span class="status-light"></span>你 <small>A—01</small></div><div class="score-health"><i id="own-top-bar"></i></div></div>
+      <div class="clock-block"><span class="round-label">镜像对决</span><strong id="clock">02:00</strong><span id="match-phase">寻找声源</span></div>
+      <div class="score-side opponent"><div>对方 <small>B—02</small><span id="enemy-hp">100</span></div><div class="score-health"><i id="enemy-top-bar"></i></div></div>
+    </div>
+    <div class="match-objective" id="match-objective">击败对方，或在 120 秒结束时拥有更多生命</div>
+    <div class="field-note"><i></i><span id="field-note">信号接收中</span><small>REMOTE / B—02</small></div>
+    <div id="crosshair" class="crosshair"><span></span><i></i><b></b></div>
+    <div id="target-label" class="target-label">瞄准巨幕中的地图</div>
+    <div id="hit-marker" aria-hidden="true"><i></i><i></i><i></i><i></i><span id="hit-damage"></span></div>
+    <div id="warning" class="warning hidden"><span class="warning-icon">!</span><span>落弹预警<small>立刻移动</small></span><b id="warning-direction">↓</b></div>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="first-hint" class="first-hint"><span class="hint-step">01 / 03</span><p>移动鼠标，找巨幕上的<span>模糊残影</span>。</p><small>W A S D 移动 · 鼠标转向</small></div>
+    <div class="bottom-hud">
+      <div class="vitals">
+        <div class="panel-label"><span class="plus-icon">+</span> 生命体征 <small>VITALS</small></div>
+        <div class="vital-value"><strong id="player-hp">100</strong><span>/ 100</span><b id="boost-label" class="hidden">逃生加速 ↑</b></div>
+        <div class="health-segments" id="health-segments"></div>
+        <div id="exposure" class="exposure"><span class="exposure-dot"></span><span id="exposure-label">低声活动</span><span id="exposure-level">LOW SIGNAL</span></div>
+      </div>
+      <div class="equipment">
+        <div class="ammo-panel"><div class="weapon-identifier"><span>相位手枪</span><small>PHASE / P—06</small></div><div class="ammo-count"><strong id="ammo-value">06</strong><span>/ 06</span></div><div class="ammo-pips" id="ammo-pips"></div><div class="reload-label" id="reload-label"><kbd>R</kbd> 换弹</div></div>
+        <div class="skills"><button id="scan-button" class="skill-button"><kbd>E</kbd><span>侦测脉冲<small id="scan-status">就绪 · 瞄准地图释放</small></span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/></svg><i id="scan-cooldown"></i></button><button id="decoy-button" class="skill-button"><kbd>Q</kbd><span>延迟伪声<small id="decoy-status">就绪 · 原地留下诱饵</small></span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8v8m4-12v16m5-13v10m5-13v16m4-12v8"/></svg><i id="decoy-cooldown"></i></button></div>
+      </div>
+      <div class="position-panel"><div class="panel-label">我的房间 <small>A—01</small></div><canvas id="local-map" width="200" height="160" aria-label="只显示自己位置的本房间导航图"></canvas><div class="coordinates" id="coordinates">X 0.0 · Z 11.8</div></div>
+    </div>
+    <div class="controls-strip"><span><kbd>WASD</kbd> 移动</span><span id="look-control">鼠标 转向</span><span><kbd>左键</kbd> 开枪</span><span id="aim-control"><kbd>右键</kbd> 精瞄</span><span><kbd>Shift</kbd> 疾跑</span><span><kbd>C</kbd> 静步</span><span><kbd>Esc</kbd> 暂停</span></div>
+  </section>
+
+  <div id="pause-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+    <section class="modal pause-card"><div class="modal-overline">DREAM SUSPENDED</div><h2 id="pause-title">梦，还在这里。</h2><p>对局已暂停。慢慢呼吸，他也不能动。</p><button class="primary-button" id="resume-button">继续梦境 <span>→</span></button><button class="secondary-button" id="pause-settings">调整设置</button><button class="text-button" id="return-menu">离开这一局</button><div class="modal-note">鼠标会在继续时重新锁定 · Esc 随时暂停</div></section>
+  </div>
+
+  <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <section class="modal settings-card"><button class="modal-close icon-button" id="settings-close" aria-label="关闭设置">×</button><div class="modal-overline">MAKE YOURSELF AT HOME</div><h2 id="settings-title">调整梦境</h2>
+      <label class="setting-row"><span>对手强度<small>下局生效。所有难度均只根据痕迹推断。</small></span><select id="difficulty"><option value="lucid">初次入梦 · 轻松</option><option value="standard" selected>浅层梦境 · 标准</option><option value="nightmare">深层梦境 · 困难</option></select></label>
+      <label class="setting-row"><span>鼠标灵敏度<small>较低灵敏度更容易瞄准微小声纹</small></span><div class="range-setting"><input id="sensitivity" type="range" min="0.4" max="2" step="0.05" value="1"><output id="sensitivity-value">1.00</output></div></label>
+      <label class="setting-row"><span>声音<small>建议戴耳机，远处的脚步有方向</small></span><div class="range-setting"><input id="volume" type="range" min="0" max="1" step="0.05" value="0.55"><output id="volume-value">55%</output></div></label>
+      <label class="setting-row"><span>视角控制<small>触控板模式：自由瞄准，右键拖动转向</small></span><select id="input-mode"><option value="locked">经典 FPS · 锁定鼠标</option><option value="free">触控板 · 自由指针</option></select></label>
+      <label class="setting-row"><span>画面质量<small>节能模式降低像素密度，保留全部场景</small></span><select id="quality"><option value="high">细腻</option><option value="low">节能</option></select></label>
+      <label class="setting-row toggle-row"><span>减少镜头晃动<small>降低走路起伏与受击震动</small></span><input id="reduce-motion" type="checkbox" role="switch"><span class="toggle-display" aria-hidden="true"></span></label>
+      <button id="settings-done" class="primary-button">保存，回到梦里 <span>↗</span></button><div class="modal-note">设置仅保存在此浏览器 · 无任何数据上传</div>
+    </section>
+  </div>
+
+  <div id="howto-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="howto-title">
+    <section class="modal howto-card"><button class="modal-close icon-button" id="howto-close" aria-label="关闭玩法介绍">×</button><div class="modal-overline">THIRTY SECONDS BEFORE THE DREAM</div><h2 id="howto-title">不是比谁快。是比谁先猜到。</h2><div class="howto-grid"><article><div class="instruction-art echo-art"><i></i><i></i><i></i></div><span>01 / 观察</span><h3>他不在屏幕上。<br>他的痕迹在。</h3><p>巨幕是对方房间的俯视图。模糊光团是枪声，淡淡拖影是脚步。残影不是他此刻的位置。</p></article><article><div class="instruction-art aim-art"><i></i><b>−34</b></div><span>02 / 预判</span><h3>朝地图开枪，<br>子弹去对面。</h3><p>对准残影前进的方向开火。直击 34 伤害，擦伤 18。弹丸约半秒后抵达，三次直击即可取胜。</p></article><article><div class="instruction-art move-art"><i></i><b>↗</b></div><span>03 / 换位</span><h3>扣动扳机后，<br>别站在原地。</h3><p>枪声会暴露你的开火位置。WASD 换位，C 静步。红色预警出现时立即躲开；受击后会短暂加速。</p></article></div><div class="skill-explainer"><p><kbd>E</kbd><span><strong>侦测脉冲</strong>瞄准地图扫描一小片区域；空区显示“空”。14 秒冷却。</span></p><p><kbd>Q</kbd><span><strong>延迟伪声</strong>原地留下诱饵，1.3 秒后发出假脚步。放下就走。20 秒冷却。</span></p></div><div class="win-rule"><strong>120 秒，活着读懂他。</strong><span>生命归零即失败；到时生命更多者获胜，相同则平局。</span></div><button id="howto-play" class="primary-button">懂了，进入梦境 <span>→</span></button></section>
+  </div>
+
+  <div id="result-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="result-title">
+    <section class="modal result-card"><div class="result-symbol" id="result-symbol">◎</div><div class="modal-overline" id="result-overline">CONNECTION CLOSED / YOU SURVIVED</div><h2 id="result-title">你读懂了他的沉默。</h2><p id="result-description">对面的声纹消失了。你的梦，还在继续。</p><div class="result-health"><span>你 <b id="result-own-hp">100</b></span><span id="result-reason">对手生命归零</span><span>对方 <b id="result-enemy-hp">0</b></span></div><div class="result-stats"><div><strong id="stat-hits">0%</strong><span>命中率</span></div><div><strong id="stat-damage">0</strong><span>造成伤害</span></div><div><strong id="stat-dodges">0</strong><span>擦肩而过</span></div><div><strong id="stat-time">0:00</strong><span>梦境时长</span></div></div><div class="result-tip" id="result-tip">残影是过去的位置，而不是现在的答案。</div><button id="replay-button" class="primary-button">再入梦一次 <span>↻</span></button><button id="result-menu" class="text-button">先醒一会儿</button><div class="modal-note" id="record-summary">本地记录</div></section>
+  </div>
+
+  <div id="error-modal" class="modal-backdrop hidden" role="alert"><section class="modal"><div class="modal-overline">SIGNAL INTERRUPTED</div><h2>房间暂时无法显现</h2><p id="error-message">浏览器未能启动 WebGL。请在 Safari 或 Chrome 中开启硬件加速，然后重新打开此文件。</p><button class="primary-button" id="retry-button">重新连接 <span>↻</span></button></section></div>
+  <div id="device-notice" class="device-notice">这场梦需要键盘与鼠标。请用 MacBook 或桌面浏览器打开，横屏体验更好。</div>
+  <noscript><div class="no-script">请启用浏览器 JavaScript，以进入这场完全离线的梦。</div></noscript>
+  <script>
+(function (root) {
+  'use strict';
+
+  const ARENA = Object.freeze({ width: 16, depth: 15, radius: 0.32, duration: 120 });
+  const OBSTACLES = Object.freeze([
+    { x: -3.8, z: 4.4, width: 2.4, depth: 1.1, height: 1.12, label: '01' },
+    { x: 3.8, z: 4.4, width: 2.4, depth: 1.1, height: 1.12, label: '02' },
+    { x: -3.0, z: 9.0, width: 1.2, depth: 2.5, height: 1.25, label: '03' },
+    { x: 3.0, z: 9.0, width: 1.2, depth: 2.5, height: 1.25, label: '04' }
+  ]);
+  const DIFFICULTY = {
+    lucid: { label: '初次入梦', accuracy: 1.55, interval: 3.5, reaction: 0.7, dodge: 0.32 },
+    standard: { label: '浅层梦境', accuracy: 1.05, interval: 2.65, reaction: 0.48, dodge: 0.52 },
+    nightmare: { label: '深层梦境', accuracy: 0.66, interval: 1.9, reaction: 0.32, dodge: 0.72 }
+  };
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const mapToWorld = (u, v) => ({ x: u * ARENA.width - 8, z: v * ARENA.depth });
+  const worldToMap = (x, z) => ({ u: (x + 8) / ARENA.width, v: z / ARENA.depth });
+
+  class SeededRandom {
+    constructor(seed = 1979) { this.state = seed >>> 0; }
+    next() {
+      this.state += 0x6D2B79F5;
+      let mixed = this.state;
+      mixed = Math.imul(mixed ^ mixed >>> 15, mixed | 1);
+      mixed ^= mixed + Math.imul(mixed ^ mixed >>> 7, mixed | 61);
+      return ((mixed ^ mixed >>> 14) >>> 0) / 4294967296;
+    }
+    range(min, max) { return min + this.next() * (max - min); }
+    offset(radius) { return (this.next() + this.next() - 1) * radius; }
+  }
+
+  function actor(x, z) {
+    return { x, z, previousX: x, previousZ: z, vx: 0, vz: 0, hp: 100, ammo: 6, reloadTime: 0, fireCooldown: 0, scanCooldown: 0, decoyCooldown: 0, boost: 0, stepDistance: 0, audibleTime: 0, moving: false, quiet: false, sprint: false };
+  }
+
+  function pointInObstacle(x, z, margin = 0) {
+    return OBSTACLES.some(block => Math.abs(x - block.x) < block.width / 2 + margin && Math.abs(z - block.z) < block.depth / 2 + margin);
+  }
+
+  function damageAt(target, victim) {
+    const distance = Math.hypot(target.x - victim.x, target.z - victim.z);
+    if (distance > 1.36 || pointInObstacle(target.x, target.z)) return 0;
+    for (let sample = 1; sample < 8; sample++) {
+      const progress = sample / 8;
+      if (pointInObstacle(target.x + (victim.x - target.x) * progress, target.z + (victim.z - target.z) * progress)) return 0;
+    }
+    return distance < 0.8 ? 34 : 18;
+  }
+
+  class Duel {
+    constructor(options = {}) {
+      this.random = new SeededRandom(options.seed || 1979);
+      this.level = DIFFICULTY[options.difficulty] || DIFFICULTY.standard;
+      this.aiEnabled = options.ai !== false;
+      this.player = actor(0, 11.8);
+      this.enemy = actor(this.random.range(-1.5, 1.5), 7.0);
+      this.time = 0;
+      this.remaining = ARENA.duration;
+      this.result = null;
+      this.traces = { player: [], enemy: [] };
+      this.scans = [];
+      this.shots = [];
+      this.impacts = [];
+      this.decoys = [];
+      this.events = [];
+      this.sequence = 0;
+      this.stats = { shots: 0, hits: 0, damage: 0, received: 0, scans: 0, dodges: 0, distance: 0, decoys: 0 };
+      this.enemyBrain = { memory: null, goal: { x: 5.7, z: 6.4 }, nextMove: 2, nextShot: 5.5, nextScan: 12, lastTrace: -1, mode: 'search', dodgeUntil: 0 };
+    }
+
+    other(side) { return side === 'player' ? 'enemy' : 'player'; }
+    emit(type, detail = {}) { this.events.push({ type, time: this.time, ...detail }); }
+    drainEvents() { const events = this.events; this.events = []; return events; }
+
+    visibleTo(side) {
+      return {
+        traces: this.traces[side],
+        scans: this.scans.filter(scan => scan.owner === side),
+        impacts: this.impacts.filter(impact => impact.owner === side),
+        incoming: this.shots.filter(shot => shot.owner !== side),
+        outgoing: this.shots.filter(shot => shot.owner === side)
+      };
+    }
+
+    addTrace(source, type, point, options = {}) {
+      const observer = this.other(source);
+      const uncertainty = type === 'shot' ? 0.48 : type === 'scan' ? 0.22 : 0.82;
+      const trace = {
+        id: ++this.sequence,
+        type,
+        x: clamp(point.x + this.random.offset(uncertainty), -7.8, 7.8),
+        z: clamp(point.z + this.random.offset(uncertainty), 0.2, 14.8),
+        dx: options.dx || 0,
+        dz: options.dz || 0,
+        born: this.time,
+        life: type === 'shot' ? 4.4 : type === 'scan' ? 2.4 : 3.2,
+        strength: options.strength || (type === 'shot' ? 1 : 0.65)
+      };
+      this.traces[observer].push(trace);
+      if (observer === 'player' && type === 'step') this.emit('remote-step', { x: trace.x, z: trace.z, strength: trace.strength });
+      return trace;
+    }
+
+    fire(side, target) {
+      const shooter = this[side];
+      if (this.result || !target || !Number.isFinite(target.x) || !Number.isFinite(target.z) || target.x < -8 || target.x > 8 || target.z < 0 || target.z > 15) return false;
+      if (shooter.fireCooldown > 0 || shooter.reloadTime > 0 || shooter.ammo <= 0) return false;
+      shooter.ammo--;
+      shooter.fireCooldown = 0.52;
+      const shot = { id: ++this.sequence, owner: side, x: target.x, z: target.z, born: this.time, lands: this.time + 0.52, dodged: false };
+      this.shots.push(shot);
+      this.addTrace(side, 'shot', shooter, { dx: shooter.vx * 0.16, dz: shooter.vz * 0.16 });
+      shooter.audibleTime = 2.1;
+      if (side === 'player') this.stats.shots++;
+      this.emit('fire', { side, target, shotId: shot.id });
+      return true;
+    }
+
+    reload(side) {
+      const shooter = this[side];
+      if (this.result || shooter.reloadTime > 0 || shooter.ammo === 6) return false;
+      shooter.reloadTime = 1.55;
+      this.emit('reload', { side });
+      return true;
+    }
+
+    scan(side, target) {
+      if (this.result || this[side].scanCooldown > 0 || !target || !Number.isFinite(target.x) || !Number.isFinite(target.z)) return false;
+      this[side].scanCooldown = 14;
+      this.scans.push({ id: ++this.sequence, owner: side, x: clamp(target.x, -8, 8), z: clamp(target.z, 0, 15), radius: 2.8, born: this.time, life: 3.6, nextPulse: this.time + 0.22, occupied: null });
+      if (side === 'player') this.stats.scans++;
+      this.emit('scan', { side });
+      return true;
+    }
+
+    decoy(side) {
+      if (this.result || this[side].decoyCooldown > 0) return false;
+      const source = this[side];
+      source.decoyCooldown = 20;
+      this.decoys.push({ owner: side, x: source.x, z: source.z, born: this.time, nextPulse: this.time + 1.3, pulses: 0 });
+      if (side === 'player') this.stats.decoys++;
+      this.emit('decoy', { side, x: source.x, z: source.z });
+      return true;
+    }
+
+    move(side, direction, delta) {
+      const moving = this[side];
+      const length = Math.hypot(direction.x || 0, direction.z || 0);
+      moving.quiet = !!direction.quiet;
+      moving.sprint = !!direction.sprint && !moving.quiet;
+      const speed = (moving.quiet ? 1.75 : moving.sprint ? 5.1 : 3.25) * (moving.boost > 0 ? 1.38 : 1);
+      const velocityX = length ? direction.x / Math.max(1, length) * speed : 0;
+      const velocityZ = length ? direction.z / Math.max(1, length) * speed : 0;
+      const oldX = moving.x;
+      const oldZ = moving.z;
+      const nextX = clamp(moving.x + velocityX * delta, -8 + ARENA.radius, 8 - ARENA.radius);
+      if (!pointInObstacle(nextX, moving.z, ARENA.radius)) moving.x = nextX;
+      const nextZ = clamp(moving.z + velocityZ * delta, ARENA.radius + 0.28, 15 - ARENA.radius);
+      if (!pointInObstacle(moving.x, nextZ, ARENA.radius)) moving.z = nextZ;
+      moving.vx = (moving.x - oldX) / delta;
+      moving.vz = (moving.z - oldZ) / delta;
+      const distance = Math.hypot(moving.x - oldX, moving.z - oldZ);
+      moving.moving = distance > 0.0001;
+      if (side === 'player') this.stats.distance += distance;
+      moving.stepDistance += distance;
+      if (moving.stepDistance > (moving.sprint ? 1.5 : 2.45)) {
+        moving.stepDistance = 0;
+        if (!moving.quiet) {
+          this.addTrace(side, 'step', moving, { dx: moving.vx * 0.36, dz: moving.vz * 0.36, strength: moving.sprint ? 0.95 : 0.6 });
+          moving.audibleTime = moving.sprint ? 1.3 : 0.7;
+        }
+        if (side === 'player') this.emit('step', { quiet: moving.quiet, sprint: moving.sprint });
+      }
+    }
+
+    randomFreePoint() {
+      for (let attempt = 0; attempt < 24; attempt++) {
+        const point = { x: this.random.range(-6.9, 6.9), z: this.random.range(2, 13.6) };
+        if (!pointInObstacle(point.x, point.z, 0.7)) return point;
+      }
+      return { x: 0, z: 7 };
+    }
+
+    chooseEnemyTarget() {
+      const memory = this.enemyBrain.memory;
+      if (!memory || this.time - memory.born > 7) return this.randomFreePoint();
+      const age = this.time - memory.born;
+      const uncertainty = this.level.accuracy + age * 0.28;
+      const prediction = clamp(age * 0.48, 0.2, 0.95);
+      return {
+        x: clamp(memory.x + memory.dx * prediction + this.random.offset(uncertainty), -7.6, 7.6),
+        z: clamp(memory.z + memory.dz * prediction + this.random.offset(uncertainty), 0.6, 14.6)
+      };
+    }
+
+    updateEnemy(delta) {
+      const brain = this.enemyBrain;
+      const perception = this.visibleTo('enemy');
+      const available = perception.traces.filter(trace => trace.id > brain.lastTrace && this.time - trace.born >= this.level.reaction);
+      if (available.length) {
+        const newest = available[available.length - 1];
+        brain.memory = { ...newest };
+        brain.lastTrace = newest.id;
+        brain.mode = 'hunt';
+      }
+      for (const incoming of perception.incoming) {
+        if (!incoming.dodged && this.time - incoming.born > 0.23 && Math.hypot(this.enemy.x - incoming.x, this.enemy.z - incoming.z) < 2.6) {
+          incoming.dodged = true;
+          if (this.random.next() < this.level.dodge) {
+            const angle = Math.atan2(this.enemy.z - incoming.z, this.enemy.x - incoming.x) + this.random.offset(0.7);
+            brain.goal = { x: clamp(this.enemy.x + Math.cos(angle) * 3, -7, 7), z: clamp(this.enemy.z + Math.sin(angle) * 3, 1, 14) };
+            brain.dodgeUntil = this.time + 0.95;
+            brain.nextMove = this.time + 1.05;
+          }
+        }
+      }
+      if (this.time >= brain.nextMove || Math.hypot(this.enemy.x - brain.goal.x, this.enemy.z - brain.goal.z) < 0.4) {
+        brain.goal = this.randomFreePoint();
+        brain.nextMove = this.time + this.random.range(1.5, 3.5);
+        brain.mode = this.random.next() < 0.2 && this.time > 12 ? 'listen' : 'move';
+      }
+      let direction = { x: brain.goal.x - this.enemy.x, z: brain.goal.z - this.enemy.z, sprint: brain.dodgeUntil > this.time || this.enemy.boost > 0, quiet: brain.mode === 'hunt' && this.random.next() < 0.025 };
+      if (brain.mode === 'listen') direction = { x: 0, z: 0 };
+      const beforeX = this.enemy.x;
+      const beforeZ = this.enemy.z;
+      this.move('enemy', direction, delta);
+      if (brain.mode !== 'listen' && Math.hypot(this.enemy.x - beforeX, this.enemy.z - beforeZ) < 0.002) brain.nextMove = this.time;
+      if (this.time > brain.nextShot) {
+        if (this.enemy.ammo === 0) this.reload('enemy');
+        else if (this.enemy.reloadTime <= 0) {
+          this.fire('enemy', this.chooseEnemyTarget());
+          brain.nextMove = Math.min(brain.nextMove, this.time + 0.2);
+        }
+        brain.nextShot = this.time + this.level.interval + this.random.range(-0.35, 0.5);
+      }
+      if (this.time > brain.nextScan) {
+        this.scan('enemy', this.chooseEnemyTarget());
+        brain.nextScan = this.time + this.random.range(16, 22);
+      }
+      if (this.enemy.hp < 55 && this.enemy.decoyCooldown <= 0 && this.random.next() < delta * 0.08) this.decoy('enemy');
+    }
+
+    tick(delta, input) {
+      this.time = Math.min(ARENA.duration, this.time + delta);
+      this.remaining = Math.max(0, ARENA.duration - this.time);
+      for (const side of ['player', 'enemy']) {
+        const entity = this[side];
+        for (const field of ['fireCooldown', 'scanCooldown', 'decoyCooldown', 'boost', 'audibleTime']) entity[field] = Math.max(0, entity[field] - delta);
+        if (entity.reloadTime > 0) {
+          entity.reloadTime = Math.max(0, entity.reloadTime - delta);
+          if (entity.reloadTime === 0) { entity.ammo = 6; this.emit('reloaded', { side }); }
+        }
+        this.traces[side] = this.traces[side].filter(trace => this.time - trace.born < trace.life);
+      }
+      this.move('player', input, delta);
+      if (this.aiEnabled) this.updateEnemy(delta);
+      for (const scan of this.scans) {
+        if (this.time >= scan.nextPulse) {
+          scan.nextPulse = this.time + 0.38;
+          const subject = this[this.other(scan.owner)];
+          scan.occupied = Math.hypot(subject.x - scan.x, subject.z - scan.z) < scan.radius;
+          if (scan.occupied) this.addTrace(this.other(scan.owner), 'scan', subject, { dx: subject.vx * 0.24, dz: subject.vz * 0.24 });
+          this.emit('scan-pulse', { side: scan.owner, occupied: scan.occupied });
+        }
+      }
+      this.scans = this.scans.filter(scan => this.time - scan.born < scan.life);
+      for (const decoy of this.decoys) {
+        if (this.time >= decoy.nextPulse && decoy.pulses < 3) {
+          this.addTrace(decoy.owner, 'step', { x: decoy.x + decoy.pulses * 0.55, z: decoy.z }, { dx: 0.7, dz: 0, strength: 0.9 });
+          decoy.nextPulse += 0.8;
+          decoy.pulses++;
+        }
+      }
+      this.decoys = this.decoys.filter(decoy => this.time - decoy.born < 5);
+      const landed = this.shots.filter(shot => this.time + 0.000001 >= shot.lands);
+      this.shots = this.shots.filter(shot => this.time + 0.000001 < shot.lands);
+      for (const shot of landed) {
+        const victimSide = this.other(shot.owner);
+        const victim = this[victimSide];
+        const damage = damageAt(shot, victim);
+        if (damage) {
+          victim.hp = Math.max(0, victim.hp - damage);
+          victim.boost = 1.65;
+          if (shot.owner === 'player') { this.stats.hits++; this.stats.damage += damage; }
+          else this.stats.received += damage;
+        } else if (victimSide === 'player' && Math.hypot(victim.x - shot.x, victim.z - shot.z) < 2.7) this.stats.dodges++;
+        const impact = { ...shot, born: this.time, damage, blocked: pointInObstacle(shot.x, shot.z) };
+        this.impacts.push(impact);
+        this.emit('impact', { side: shot.owner, victim: victimSide, x: shot.x, z: shot.z, damage, blocked: impact.blocked });
+      }
+      this.impacts = this.impacts.filter(impact => this.time - impact.born < 1.8);
+      if (this.player.hp <= 0 || this.enemy.hp <= 0 || this.remaining <= 0.000001) this.finish();
+    }
+
+    step(delta, input = {}) {
+      if (this.result || !Number.isFinite(delta) || delta <= 0) return;
+      let left = delta;
+      while (left > 0.000001 && !this.result) {
+        const slice = Math.min(left, 1 / 60);
+        this.tick(slice, input);
+        left -= slice;
+      }
+    }
+
+    finish() {
+      if (this.result) return;
+      if (this.remaining < 0.001) { this.remaining = 0; this.time = ARENA.duration; }
+      const winner = this.player.hp === this.enemy.hp ? 'draw' : this.player.hp > this.enemy.hp ? 'player' : 'enemy';
+      this.result = { winner, reason: this.player.hp <= 0 || this.enemy.hp <= 0 ? 'elimination' : 'timeout', duration: this.time, stats: { ...this.stats } };
+      this.emit('finish', this.result);
+    }
+  }
+
+  const api = { Duel, ARENA, OBSTACLES, DIFFICULTY, mapToWorld, worldToMap, pointInObstacle, damageAt, SeededRandom, clamp };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else root.Blindspot = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+  <script>
+(function (root) {
+  'use strict';
+  const { OBSTACLES, worldToMap, mapToWorld, clamp } = root.Blindspot;
+  const MAP = Object.freeze({ x: 550, y: 83, width: 676, height: 634 });
+
+  class TacticalDisplay {
+    constructor() {
+      this.canvas = document.createElement('canvas');
+      this.canvas.width = 1792;
+      this.canvas.height = 768;
+      this.context = this.canvas.getContext('2d');
+      this.base = document.createElement('canvas');
+      this.base.width = 1792;
+      this.base.height = 768;
+      this.drawBase();
+      this.lastUpdate = -1;
+    }
+
+    point(x, z) {
+      const normalized = worldToMap(x, z);
+      return { x: MAP.x + normalized.u * MAP.width, y: MAP.y + normalized.v * MAP.height };
+    }
+
+    target(u, v) {
+      const screenX = u * this.canvas.width;
+      const screenY = v * this.canvas.height;
+      if (screenX < MAP.x || screenX > MAP.x + MAP.width || screenY < MAP.y || screenY > MAP.y + MAP.height) return null;
+      return mapToWorld((screenX - MAP.x) / MAP.width, (screenY - MAP.y) / MAP.height);
+    }
+
+    text(context, text, x, y, size = 16, color = '#6c948c', font = 'monospace') {
+      context.fillStyle = color;
+      context.font = `${size}px ${font}`;
+      context.fillText(text, x, y);
+    }
+
+    drawBase() {
+      const context = this.base.getContext('2d');
+      context.fillStyle = '#152f2c';
+      context.fillRect(0, 0, 1792, 768);
+      const wash = context.createRadialGradient(890, 390, 80, 890, 390, 1040);
+      wash.addColorStop(0, '#284b42');
+      wash.addColorStop(1, '#152b29');
+      context.fillStyle = wash;
+      context.fillRect(0, 0, 1792, 768);
+      context.strokeStyle = '#71998a45';
+      context.lineWidth = 1;
+      context.strokeRect(24.5, 24.5, 1743, 719);
+      context.beginPath();
+      context.moveTo(480, 25); context.lineTo(480, 743);
+      context.moveTo(1292, 25); context.lineTo(1292, 743);
+      context.stroke();
+      this.text(context, 'B / 02', 68, 155, 94, '#b3c9b1', '"Helvetica Neue", sans-serif');
+      this.text(context, 'REMOTE CHAMBER', 72, 204, 21, '#b9cdbb');
+      this.text(context, '镜像房间 · 对方区域', 72, 246, 22, '#80a394', 'sans-serif');
+      context.fillStyle = '#779f8b55'; context.fillRect(72, 283, 328, 1);
+      this.text(context, 'SURFACE AREA', 72, 326, 14);
+      this.text(context, '16 × 15 m', 72, 364, 28, '#bdd1bc');
+      this.text(context, 'VISUAL CONTACT', 72, 426, 14);
+      this.text(context, 'UNAVAILABLE', 72, 460, 23, '#b1c1aa');
+      this.text(context, '没有人影。只有回声。', 72, 520, 20, '#87a792', 'sans-serif');
+      this.text(context, 'ACOUSTIC SIGNAL', 72, 603, 14);
+      this.text(context, 'SPACE TRANSFER / ACTIVE', 72, 710, 13, '#719082');
+      this.text(context, '声纹图谱', 1344, 104, 28, '#c7d4bd', 'sans-serif');
+      this.text(context, 'ECHO TOPOGRAPHY', 1344, 136, 14);
+      const legend = [['#dbae75', '枪声残影', 'FIRE / HIGH CONFIDENCE'], ['#a9bc9e', '脚步轨迹', 'STEP / LOW CONFIDENCE'], ['#7bcbb1', '侦测波纹', 'SCAN / LOCAL CONTACT']];
+      legend.forEach((entry, index) => {
+        const height = 218 + index * 108;
+        context.fillStyle = entry[0]; context.globalAlpha = 0.26;
+        context.beginPath(); context.arc(1357, height - 7, 13, 0, Math.PI * 2); context.fill();
+        context.globalAlpha = 1; context.strokeStyle = entry[0];
+        context.beginPath(); context.arc(1357, height - 7, 5, 0, Math.PI * 2); context.stroke();
+        this.text(context, entry[1], 1388, height, 21, '#b8c8b0', 'sans-serif');
+        this.text(context, entry[2], 1388, height + 28, 11);
+      });
+      context.fillStyle = '#779f8b44'; context.fillRect(1344, 510, 367, 1);
+      this.text(context, '瞄准地图，子弹落在对面。', 1344, 550, 18, '#aac0a8', 'sans-serif');
+      this.text(context, '开枪，也会留下你的回声。', 1344, 583, 18, '#88a08c', 'sans-serif');
+      this.text(context, 'NO DIRECT LINE OF SIGHT', 1344, 710, 12);
+      context.fillStyle = '#6d987d16'; context.fillRect(MAP.x, MAP.y, MAP.width, MAP.height);
+      context.strokeStyle = '#8daf9440';
+      for (let column = 0; column <= 16; column++) {
+        const x = MAP.x + column / 16 * MAP.width;
+        context.lineWidth = column % 4 === 0 ? 1.5 : 0.6;
+        context.beginPath(); context.moveTo(x, MAP.y); context.lineTo(x, MAP.y + MAP.height); context.stroke();
+      }
+      for (let row = 0; row <= 15; row++) {
+        const y = MAP.y + row / 15 * MAP.height;
+        context.lineWidth = row % 5 === 0 ? 1.5 : 0.6;
+        context.beginPath(); context.moveTo(MAP.x, y); context.lineTo(MAP.x + MAP.width, y); context.stroke();
+      }
+      context.strokeStyle = '#b9cca991'; context.lineWidth = 3;
+      context.strokeRect(MAP.x, MAP.y, MAP.width, MAP.height);
+      context.strokeStyle = '#b9cca944'; context.lineWidth = 1;
+      context.strokeRect(MAP.x - 8, MAP.y - 8, MAP.width + 16, MAP.height + 16);
+      for (const block of OBSTACLES) {
+        const origin = this.point(block.x - block.width / 2, block.z - block.depth / 2);
+        const width = block.width / 16 * MAP.width;
+        const height = block.depth / 15 * MAP.height;
+        context.fillStyle = '#8bad8130'; context.fillRect(origin.x, origin.y, width, height);
+        context.strokeStyle = '#b8c99a9c'; context.lineWidth = 1.5; context.strokeRect(origin.x, origin.y, width, height);
+        context.save(); context.beginPath(); context.rect(origin.x, origin.y, width, height); context.clip();
+        context.strokeStyle = '#93ab7940'; context.lineWidth = 1;
+        for (let stripe = -height; stripe < width; stripe += 9) {
+          context.beginPath(); context.moveTo(origin.x + stripe, origin.y + height); context.lineTo(origin.x + stripe + height, origin.y); context.stroke();
+        }
+        context.restore();
+        this.text(context, block.label, origin.x + width / 2 - 9, origin.y + height / 2 + 6, 17, '#c0cba6');
+      }
+      context.textAlign = 'center';
+      for (let index = 0; index < 4; index++) this.text(context, ['A', 'B', 'C', 'D'][index], MAP.x + MAP.width * (index + 0.5) / 4, 57, 15, '#a8b99a');
+      this.text(context, '16 m', MAP.x + MAP.width / 2, 748, 12);
+      context.textAlign = 'left';
+      for (let index = 0; index < 3; index++) this.text(context, String(index + 1).padStart(2, '0'), MAP.x - 42, MAP.y + MAP.height * (index + 0.5) / 3 + 5, 14, '#a8b99a');
+      context.fillStyle = '#b7d5af'; context.fillRect(MAP.x + MAP.width * 0.15, MAP.y - 2, MAP.width * 0.7, 4);
+      this.text(context, 'SCREEN', MAP.x + MAP.width / 2 - 23, MAP.y + 20, 10, '#a3b494');
+      for (let row = 0; row < 768; row += 3) { context.fillStyle = '#0000000c'; context.fillRect(0, row, 1792, 1); }
+    }
+
+    draw(model, target, time, demo = false) {
+      const context = this.context;
+      context.clearRect(0, 0, 1792, 768);
+      context.drawImage(this.base, 0, 0);
+      const visible = model ? model.visibleTo('player') : { traces: [], scans: [], impacts: [], outgoing: [] };
+      const traces = demo ? [
+        { x: Math.sin(time * 0.23) * 4, z: 5.3 + Math.cos(time * 0.34), born: time - 0.8, life: 3.2, dx: 1.6, dz: 0.7, type: 'step', strength: 0.8 },
+        { x: -4.7, z: 11, born: time - (time % 5), life: 4.4, dx: 0, dz: 0, type: 'shot', strength: 1 }
+      ] : visible.traces;
+      context.save(); context.beginPath(); context.rect(MAP.x + 2, MAP.y + 2, MAP.width - 4, MAP.height - 4); context.clip();
+      const scanline = MAP.y + (time * 32 % MAP.height);
+      const sweep = context.createLinearGradient(0, scanline - 65, 0, scanline);
+      sweep.addColorStop(0, '#abcaa400'); sweep.addColorStop(1, '#abcaa40b');
+      context.fillStyle = sweep; context.fillRect(MAP.x, scanline - 65, MAP.width, 65);
+      context.fillStyle = '#b9d2ad16'; context.fillRect(MAP.x, scanline, MAP.width, 1);
+      for (const scan of visible.scans) {
+        const center = this.point(scan.x, scan.z);
+        const radius = scan.radius / 16 * MAP.width;
+        const phase = (time - scan.born) % 1.2 / 1.2;
+        const gradient = context.createRadialGradient(center.x, center.y, 0, center.x, center.y, radius);
+        gradient.addColorStop(0, '#6bcbae04'); gradient.addColorStop(0.8, '#6bcbae18'); gradient.addColorStop(1, '#6bcbae00');
+        context.fillStyle = gradient; context.beginPath(); context.arc(center.x, center.y, radius, 0, Math.PI * 2); context.fill();
+        context.strokeStyle = '#8bd6b5b0'; context.lineWidth = 1.5; context.setLineDash([4, 5]);
+        context.beginPath(); context.arc(center.x, center.y, radius, 0, Math.PI * 2); context.stroke(); context.setLineDash([]);
+        context.strokeStyle = `rgba(161,227,188,${(1 - phase) * 0.65})`;
+        context.beginPath(); context.arc(center.x, center.y, radius * phase, 0, Math.PI * 2); context.stroke();
+        this.text(context, scan.occupied === null ? '扫描中' : scan.occupied ? '检测到移动' : '暂无声纹 · 空', center.x - 35, center.y + radius + 21, 13, '#b9ddbb', 'sans-serif');
+      }
+      for (const trace of traces) {
+        const age = time - trace.born;
+        if (age < 0 || age >= trace.life) continue;
+        const fade = Math.pow(1 - age / trace.life, 1.4) * trace.strength;
+        const center = this.point(trace.x, trace.z);
+        const radius = trace.type === 'shot' ? 43 + age * 6 : trace.type === 'scan' ? 19 : 28;
+        const color = trace.type === 'shot' ? '239,177,107' : trace.type === 'scan' ? '145,230,186' : '205,220,166';
+        const bloom = context.createRadialGradient(center.x, center.y, 2, center.x, center.y, radius);
+        bloom.addColorStop(0, `rgba(${color},${fade * 0.57})`);
+        bloom.addColorStop(0.36, `rgba(${color},${fade * 0.24})`);
+        bloom.addColorStop(1, `rgba(${color},0)`);
+        context.fillStyle = bloom; context.beginPath(); context.arc(center.x, center.y, radius, 0, Math.PI * 2); context.fill();
+        if (trace.dx || trace.dz) {
+          const tail = this.point(trace.x - trace.dx, trace.z - trace.dz);
+          const line = context.createLinearGradient(tail.x, tail.y, center.x, center.y);
+          line.addColorStop(0, `rgba(${color},0)`); line.addColorStop(1, `rgba(${color},${fade * 0.5})`);
+          context.strokeStyle = line; context.lineWidth = 7; context.lineCap = 'round';
+          context.beginPath(); context.moveTo(tail.x, tail.y); context.quadraticCurveTo((tail.x + center.x) / 2 + 5, (tail.y + center.y) / 2, center.x, center.y); context.stroke();
+          context.lineCap = 'butt';
+        }
+        if (trace.type === 'shot') {
+          context.strokeStyle = `rgba(${color},${fade * 0.48})`; context.lineWidth = 1;
+          context.beginPath(); context.arc(center.x, center.y, 16 + age * 10, 0, Math.PI * 2); context.stroke();
+          this.text(context, '声源', center.x + 22, center.y - 16, 11, `rgba(${color},${fade})`, 'sans-serif');
+        }
+      }
+      for (const shot of visible.outgoing) {
+        const center = this.point(shot.x, shot.z);
+        const progress = clamp((time - shot.born) / 0.52, 0, 1);
+        context.strokeStyle = '#e3e3b7'; context.lineWidth = 1.3;
+        context.beginPath(); context.arc(center.x, center.y, 5 + (1 - progress) * 28, 0, Math.PI * 2); context.stroke();
+        context.beginPath(); context.moveTo(center.x - 6, center.y); context.lineTo(center.x + 6, center.y); context.moveTo(center.x, center.y - 6); context.lineTo(center.x, center.y + 6); context.stroke();
+      }
+      for (const impact of visible.impacts) {
+        const age = time - impact.born;
+        const center = this.point(impact.x, impact.z);
+        context.globalAlpha = Math.max(0, 1 - age / 1.5);
+        context.strokeStyle = impact.damage ? '#f1c787' : '#acb89e'; context.lineWidth = impact.damage ? 2 : 1;
+        context.beginPath(); context.arc(center.x, center.y, 12 + age * 25, 0, Math.PI * 2); context.stroke();
+        if (impact.damage) this.text(context, `−${impact.damage}`, center.x + 17, center.y - 15 - age * 12, 24, '#f2c990');
+        else this.text(context, impact.blocked ? '掩体' : '未命中', center.x + 14, center.y - 13, 12, '#adbc9e', 'sans-serif');
+        context.globalAlpha = 1;
+      }
+      if (target && !demo) {
+        const center = this.point(target.x, target.z);
+        context.strokeStyle = '#e0e7c48c'; context.lineWidth = 1;
+        context.setLineDash([3, 6]);
+        context.beginPath(); context.moveTo(center.x, MAP.y); context.lineTo(center.x, MAP.y + MAP.height); context.moveTo(MAP.x, center.y); context.lineTo(MAP.x + MAP.width, center.y); context.stroke(); context.setLineDash([]);
+        context.strokeStyle = '#e4e9c9'; context.beginPath(); context.arc(center.x, center.y, 12, 0, Math.PI * 2); context.stroke();
+      }
+      context.restore();
+      const strength = traces.reduce((sum, trace) => sum + Math.max(0, 1 - (time - trace.born) / trace.life), 0);
+      context.strokeStyle = '#adc6a2'; context.lineWidth = 1;
+      context.beginPath();
+      for (let index = 0; index < 160; index++) {
+        const amplitude = 3 + Math.min(strength, 4) * 5;
+        const height = Math.sin(index * 0.42 + time * 4) * Math.sin(index * 0.14 - time * 2) * amplitude;
+        if (index === 0) context.moveTo(72, 646 + height); else context.lineTo(72 + index * 2.05, 646 + height);
+      }
+      context.stroke();
+      context.fillStyle = strength > 0.3 ? '#b5d49d' : '#638376'; context.beginPath(); context.arc(1687, 663, 5, 0, Math.PI * 2); context.fill();
+      this.text(context, strength > 0.3 ? 'SIGNAL DETECTED' : 'LISTENING…', 1344, 670, 16, '#a7c096');
+      this.lastUpdate = time;
+      return this.canvas;
+    }
+  }
+
+  root.Blindspot.TacticalDisplay = TacticalDisplay;
+  root.Blindspot.MAP = MAP;
+})(window);
+
+</script>
+  <script>
+(function (root) {
+  'use strict';
+  const { OBSTACLES, SeededRandom, clamp } = root.Blindspot;
+  const SCREEN = { x: -7.2, width: 14.4, bottom: 0.92, height: 5.84, z: 0.075 };
+  const identity = () => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+
+  function multiply(left, right) {
+    const result = new Float32Array(16);
+    for (let column = 0; column < 4; column++) for (let row = 0; row < 4; row++) {
+      result[column * 4 + row] = left[row] * right[column * 4] + left[4 + row] * right[column * 4 + 1] + left[8 + row] * right[column * 4 + 2] + left[12 + row] * right[column * 4 + 3];
+    }
+    return result;
+  }
+
+  function transform(position, scale = [1, 1, 1], rotation = [0, 0, 0]) {
+    const [rotateX, rotateY, rotateZ] = rotation;
+    const cosineX = Math.cos(rotateX), sineX = Math.sin(rotateX), cosineY = Math.cos(rotateY), sineY = Math.sin(rotateY), cosineZ = Math.cos(rotateZ), sineZ = Math.sin(rotateZ);
+    const rotationX = new Float32Array([1, 0, 0, 0, 0, cosineX, sineX, 0, 0, -sineX, cosineX, 0, 0, 0, 0, 1]);
+    const rotationY = new Float32Array([cosineY, 0, -sineY, 0, 0, 1, 0, 0, sineY, 0, cosineY, 0, 0, 0, 0, 1]);
+    const rotationZ = new Float32Array([cosineZ, sineZ, 0, 0, -sineZ, cosineZ, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    const result = multiply(multiply(rotationY, rotationX), rotationZ);
+    for (let index = 0; index < 3; index++) { result[index] *= scale[0]; result[4 + index] *= scale[1]; result[8 + index] *= scale[2]; }
+    result[12] = position[0]; result[13] = position[1]; result[14] = position[2];
+    return result;
+  }
+
+  function perspective(fov, aspect, near, far) {
+    const focal = 1 / Math.tan(fov / 2);
+    return new Float32Array([focal / aspect, 0, 0, 0, 0, focal, 0, 0, 0, 0, (far + near) / (near - far), -1, 0, 0, 2 * far * near / (near - far), 0]);
+  }
+
+  function cameraBasis(yaw, pitch) {
+    return {
+      forward: [Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)],
+      right: [Math.cos(yaw), 0, Math.sin(yaw)],
+      up: [-Math.sin(yaw) * Math.sin(pitch), Math.cos(pitch), Math.cos(yaw) * Math.sin(pitch)]
+    };
+  }
+
+  function viewMatrix(eye, yaw, pitch) {
+    const { forward, right, up } = cameraBasis(yaw, pitch);
+    const dot = (first, second) => first[0] * second[0] + first[1] * second[1] + first[2] * second[2];
+    return new Float32Array([right[0], up[0], -forward[0], 0, right[1], up[1], -forward[1], 0, right[2], up[2], -forward[2], 0, -dot(right, eye), -dot(up, eye), dot(forward, eye), 1]);
+  }
+
+  class Geometry {
+    constructor() { this.data = []; }
+    vertex(point, normal, color, uv, material) { this.data.push(...point, ...normal, ...color, ...uv, material); }
+    quad(points, normal, color, material = 0, uvs = [[0, 0], [1, 0], [1, 1], [0, 1]]) {
+      for (const index of [0, 1, 2, 0, 2, 3]) this.vertex(points[index], normal, color, uvs[index], material);
+    }
+    box(x, y, z, width, height, depth, color, material = 0, rotation = 0) {
+      const lowX = -width / 2, highX = width / 2, lowY = y - height / 2, highY = y + height / 2, lowZ = -depth / 2, highZ = depth / 2;
+      const rotate = point => [x + point[0] * Math.cos(rotation) + point[2] * Math.sin(rotation), point[1], z - point[0] * Math.sin(rotation) + point[2] * Math.cos(rotation)];
+      const rotateNormal = normal => [normal[0] * Math.cos(rotation) + normal[2] * Math.sin(rotation), normal[1], -normal[0] * Math.sin(rotation) + normal[2] * Math.cos(rotation)];
+      const faces = [
+        [[[lowX, lowY, highZ], [highX, lowY, highZ], [highX, highY, highZ], [lowX, highY, highZ]], [0, 0, 1]],
+        [[[highX, lowY, lowZ], [lowX, lowY, lowZ], [lowX, highY, lowZ], [highX, highY, lowZ]], [0, 0, -1]],
+        [[[highX, lowY, highZ], [highX, lowY, lowZ], [highX, highY, lowZ], [highX, highY, highZ]], [1, 0, 0]],
+        [[[lowX, lowY, lowZ], [lowX, lowY, highZ], [lowX, highY, highZ], [lowX, highY, lowZ]], [-1, 0, 0]],
+        [[[lowX, highY, highZ], [highX, highY, highZ], [highX, highY, lowZ], [lowX, highY, lowZ]], [0, 1, 0]],
+        [[[lowX, lowY, lowZ], [highX, lowY, lowZ], [highX, lowY, highZ], [lowX, lowY, highZ]], [0, -1, 0]]
+      ];
+      for (const [points, normal] of faces) this.quad(points.map(rotate), rotateNormal(normal), color, material);
+    }
+    bevelBox(x, y, z, width, height, depth, bevel, color) {
+      const halfWidth = width / 2, halfHeight = height / 2;
+      const outline = [[-halfWidth + bevel, -halfHeight], [halfWidth - bevel, -halfHeight], [halfWidth, -halfHeight + bevel], [halfWidth, halfHeight - bevel], [halfWidth - bevel, halfHeight], [-halfWidth + bevel, halfHeight], [-halfWidth, halfHeight - bevel], [-halfWidth, -halfHeight + bevel]];
+      for (let index = 0; index < outline.length; index++) {
+        const first = outline[index], second = outline[(index + 1) % outline.length];
+        const differenceX = second[0] - first[0], differenceY = second[1] - first[1], length = Math.hypot(differenceX, differenceY);
+        this.quad([[x + first[0], y + first[1], z - depth / 2], [x + second[0], y + second[1], z - depth / 2], [x + second[0], y + second[1], z + depth / 2], [x + first[0], y + first[1], z + depth / 2]], [differenceY / length, -differenceX / length, 0], color, 1);
+        for (const sign of [-1, 1]) this.quad([[x, y, z + sign * depth / 2], [x + first[0], y + first[1], z + sign * depth / 2], [x + second[0], y + second[1], z + sign * depth / 2], [x, y, z + sign * depth / 2]], [0, 0, sign], color, 1);
+      }
+    }
+    ring(radius, thickness, color, material = 3, segments = 64) {
+      for (let segment = 0; segment < segments; segment++) {
+        const first = segment / segments * Math.PI * 2;
+        const second = (segment + 1) / segments * Math.PI * 2;
+        this.quad([[Math.cos(first) * radius, 0, Math.sin(first) * radius], [Math.cos(second) * radius, 0, Math.sin(second) * radius], [Math.cos(second) * (radius - thickness), 0, Math.sin(second) * (radius - thickness)], [Math.cos(first) * (radius - thickness), 0, Math.sin(first) * (radius - thickness)]], [0, 1, 0], color, material);
+      }
+    }
+    cylinder(x, y, z, radius, height, color, material = 0, segments = 12) {
+      for (let segment = 0; segment < segments; segment++) {
+        const first = segment / segments * Math.PI * 2;
+        const second = (segment + 1) / segments * Math.PI * 2;
+        const pointA = [x + Math.cos(first) * radius, y - height / 2, z + Math.sin(first) * radius];
+        const pointB = [x + Math.cos(second) * radius, y - height / 2, z + Math.sin(second) * radius];
+        this.quad([pointA, pointB, [pointB[0], y + height / 2, pointB[2]], [pointA[0], y + height / 2, pointA[2]]], [Math.cos((first + second) / 2), 0, Math.sin((first + second) / 2)], color, material);
+        this.quad([[x, y + height / 2, z], [pointA[0], y + height / 2, pointA[2]], [pointB[0], y + height / 2, pointB[2]], [x, y + height / 2, z]], [0, 1, 0], color, material);
+      }
+    }
+  }
+
+  const vertexSource = `
+    precision highp float;
+    attribute vec3 aPosition;
+    attribute vec3 aNormal;
+    attribute vec3 aColor;
+    attribute vec2 aUv;
+    attribute float aMaterial;
+    uniform mat4 uProjection;
+    uniform mat4 uView;
+    uniform mat4 uModel;
+    varying vec3 vWorld;
+    varying vec3 vNormal;
+    varying vec3 vColor;
+    varying vec2 vUv;
+    varying float vMaterial;
+    void main() {
+      vec4 world = uModel * vec4(aPosition, 1.0);
+      vWorld = world.xyz;
+      vNormal = normalize(mat3(uModel) * aNormal);
+      vColor = aColor;
+      vUv = aUv;
+      vMaterial = aMaterial;
+      gl_Position = uProjection * uView * world;
+    }
+  `;
+  const fragmentSource = `
+    precision highp float;
+    uniform vec3 uEye;
+    uniform sampler2D uTexture;
+    uniform float uTextured;
+    uniform float uOpacity;
+    uniform float uTime;
+    uniform vec3 uTint;
+    varying vec3 vWorld;
+    varying vec3 vNormal;
+    varying vec3 vColor;
+    varying vec2 vUv;
+    varying float vMaterial;
+    float random(vec3 point) { return fract(sin(dot(point, vec3(12.9898, 78.233, 45.164))) * 43758.5453); }
+    float blockShadow(vec2 center, vec2 size) {
+      vec2 distance = max(abs(vWorld.xz - center) - size, 0.0);
+      return exp(-length(distance) * 2.5) * 0.26;
+    }
+    void main() {
+      vec3 color = vColor;
+      float alpha = uOpacity;
+      if (uTextured > 0.5) {
+        vec4 texel = texture2D(uTexture, vUv);
+        color = texel.rgb;
+        alpha *= texel.a;
+        if (uTextured < 1.5) color *= 1.12;
+      } else if (vMaterial < 2.5) {
+        vec3 normal = normalize(vNormal);
+        float light = max(dot(normal, normalize(vec3(-0.25, 0.85, 0.28))), 0.0);
+        vec3 illumination = vec3(0.37, 0.41, 0.37) + vec3(0.46, 0.47, 0.40) * light;
+        vec3 toScreen = vec3(0.0, 3.8, -1.0) - vWorld;
+        float screenLight = max(dot(normal, normalize(toScreen)), 0.0) * exp(-max(vWorld.z, 0.0) * 0.092);
+        illumination += vec3(0.25, 0.43, 0.34) * screenLight;
+        float lamp = exp(-length(vWorld.xz - vec2(4.5, 7.0)) * 0.23) + exp(-length(vWorld.xz - vec2(-4.5, 7.0)) * 0.23);
+        illumination += vec3(0.2, 0.19, 0.15) * lamp * max(normal.y, 0.0);
+        float grain = random(floor(vWorld * 145.0));
+        color *= illumination * (vMaterial > 0.5 && vMaterial < 1.5 ? 0.995 + grain * 0.01 : 0.96 + grain * 0.08);
+        if (vMaterial > 1.5) {
+          vec2 tile = abs(fract(vWorld.xz) - 0.5);
+          float seam = max(smoothstep(0.493, 0.5, tile.x), smoothstep(0.493, 0.5, tile.y));
+          color *= 1.0 - seam * 0.17;
+          color += step(0.96, grain) * 0.055;
+          float shadow = blockShadow(vec2(-3.8, 4.4), vec2(1.2, 0.55));
+          shadow += blockShadow(vec2(3.8, 4.4), vec2(1.2, 0.55));
+          shadow += blockShadow(vec2(-3.0, 9.0), vec2(0.6, 1.25));
+          shadow += blockShadow(vec2(3.0, 9.0), vec2(0.6, 1.25));
+          color *= 1.0 - shadow;
+          color += vec3(0.06, 0.13, 0.08) * exp(-vWorld.z * 0.31);
+        }
+        float ceilingAO = smoothstep(0.0, 0.45, 7.4 - vWorld.y);
+        color *= 0.76 + ceilingAO * 0.24;
+      } else color *= 1.06;
+      float fog = 1.0 - exp(-length(vWorld - uEye) * 0.014);
+      if (uTextured < 1.5) color = mix(color, vec3(0.105, 0.145, 0.132), fog);
+      color *= uTint;
+      gl_FragColor = vec4(color, alpha);
+    }
+  `;
+
+  class RoomRenderer {
+    constructor(canvas, display) {
+      this.canvas = canvas;
+      this.display = display;
+      this.gl = canvas.getContext('webgl', { alpha: false, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: false });
+      if (!this.gl) throw new Error('WEBGL_UNAVAILABLE');
+      const gl = this.gl;
+      this.program = this.createProgram(vertexSource, fragmentSource);
+      gl.useProgram(this.program);
+      this.attributes = {};
+      for (const name of ['aPosition', 'aNormal', 'aColor', 'aUv', 'aMaterial']) this.attributes[name] = gl.getAttribLocation(this.program, name);
+      this.uniforms = {};
+      for (const name of ['uProjection', 'uView', 'uModel', 'uEye', 'uTexture', 'uTextured', 'uOpacity', 'uTime', 'uTint']) this.uniforms[name] = gl.getUniformLocation(this.program, name);
+      this.world = this.upload(this.buildWorld());
+      this.gun = this.upload(this.buildGun());
+      this.magazine = this.upload(this.buildMagazine());
+      this.screen = this.upload(this.buildScreen());
+      const ring = new Geometry(); ring.ring(1, 0.025, [0.94, 0.38, 0.22]); this.ring = this.upload(ring);
+      const flash = new Geometry(); flash.box(0, 0, 0, 0.08, 0.08, 0.18, [1, 0.85, 0.54], 3); this.flash = this.upload(flash);
+      const beam = new Geometry(); beam.cylinder(0, 1.5, 0, 0.035, 3, [1, 0.55, 0.3], 3); this.beam = this.upload(beam);
+      this.screenTexture = this.createTexture(display.canvas);
+      this.decals = this.buildDecals();
+      this.eye = [0, 1.72, 11.8]; this.yaw = 0; this.pitch = 0.17; this.fov = 65 * Math.PI / 180;
+      this.quality = 'high'; this.pixelRatio = 1;
+      gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
+      gl.clearColor(0.1, 0.13, 0.12, 1);
+      this.resize();
+    }
+
+    createProgram(vertex, fragment) {
+      const gl = this.gl;
+      const program = gl.createProgram();
+      for (const [source, type] of [[vertex, gl.VERTEX_SHADER], [fragment, gl.FRAGMENT_SHADER]]) {
+        const shader = gl.createShader(type); gl.shaderSource(shader, source); gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader));
+        gl.attachShader(program, shader); gl.deleteShader(shader);
+      }
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program));
+      return program;
+    }
+
+    upload(geometry) {
+      const gl = this.gl; const buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(geometry.data), gl.STATIC_DRAW);
+      return { buffer, count: geometry.data.length / 12 };
+    }
+
+    createTexture(canvas) {
+      const gl = this.gl; const texture = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+      return texture;
+    }
+
+    updateScreen() {
+      const gl = this.gl; gl.bindTexture(gl.TEXTURE_2D, this.screenTexture);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, this.display.canvas);
+    }
+
+    draw(mesh, model = identity(), options = {}) {
+      const gl = this.gl;
+      gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
+      let offset = 0;
+      for (const [name, size] of [['aPosition', 3], ['aNormal', 3], ['aColor', 3], ['aUv', 2], ['aMaterial', 1]]) {
+        const attribute = this.attributes[name]; gl.enableVertexAttribArray(attribute); gl.vertexAttribPointer(attribute, size, gl.FLOAT, false, 48, offset * 4); offset += size;
+      }
+      gl.uniformMatrix4fv(this.uniforms.uModel, false, model);
+      gl.uniform1f(this.uniforms.uTextured, options.texture ? options.decal ? 2 : 1 : 0);
+      gl.uniform1f(this.uniforms.uOpacity, options.opacity === undefined ? 1 : options.opacity);
+      gl.uniform3fv(this.uniforms.uTint, options.tint || [1, 1, 1]);
+      if (options.texture) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, options.texture); }
+      gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
+    }
+
+    buildScreen() {
+      const mesh = new Geometry();
+      mesh.quad([[SCREEN.x, SCREEN.bottom, SCREEN.z], [SCREEN.x + SCREEN.width, SCREEN.bottom, SCREEN.z], [SCREEN.x + SCREEN.width, SCREEN.bottom + SCREEN.height, SCREEN.z], [SCREEN.x, SCREEN.bottom + SCREEN.height, SCREEN.z]], [0, 0, 1], [1, 1, 1], 3, [[0, 1], [1, 1], [1, 0], [0, 0]]);
+      return mesh;
+    }
+
+    buildWorld() {
+      const mesh = new Geometry();
+      const concrete = [0.39, 0.43, 0.38], pale = [0.53, 0.55, 0.46], metal = [0.16, 0.21, 0.19], trim = [0.24, 0.3, 0.27], mint = [0.62, 0.76, 0.59], orange = [0.68, 0.35, 0.21];
+      mesh.box(0, -0.16, 7.5, 16.6, 0.3, 15.6, [0.38, 0.42, 0.36], 2);
+      mesh.box(0, 7.55, 7.5, 16.5, 0.3, 15.5, [0.3, 0.35, 0.3]);
+      mesh.box(0, 3.6, -0.3, 16.5, 7.8, 0.5, [0.23, 0.29, 0.25]);
+      mesh.box(0, 3.65, 15.25, 16.5, 7.6, 0.5, concrete);
+      for (const side of [-1, 1]) {
+        mesh.box(side * 8.25, 3.6, 7.5, 0.5, 7.6, 15, concrete);
+        mesh.box(side * 7.95, 0.14, 7.5, 0.08, 0.28, 15, metal);
+        mesh.box(side * 7.96, 2.4, 7.5, 0.07, 0.05, 15, trim);
+        mesh.box(side * 7.94, 2.3, 7.5, 0.07, 0.08, 15, orange);
+        for (const position of [1, 6.7, 12.8]) {
+          mesh.box(side * 7.87, 3.8, position, 0.28, 7.2, 0.46, pale);
+          mesh.box(side * 7.84, 0.57, position, 0.35, 1.1, 0.58, trim);
+        }
+        for (const position of [3.4, 9.7]) {
+          mesh.box(side * 7.94, 4.85, position, 0.1, 2.3, 3.8, metal);
+          mesh.box(side * 7.87, 4.85, position, 0.035, 2.08, 3.56, [0.5, 0.6, 0.49], 3);
+          for (let slat = 0; slat < 8; slat++) mesh.box(side * 7.8, 3.9 + slat * 0.27, position, 0.18, 0.09, 3.7, trim);
+          for (let bar = -1; bar <= 1; bar++) mesh.box(side * 7.76, 4.84, position + bar * 1.18, 0.1, 2.14, 0.035, metal);
+          mesh.box(side * 7.7, 3.67, position, 0.55, 0.12, 4.05, pale);
+          for (let panel = 0; panel < 10; panel++) mesh.box(side * 7.9, 1.25, position - 1.58 + panel * 0.35, 0.13, 1.7, 0.18, [0.3, 0.36, 0.3]);
+        }
+        mesh.box(side * 7.35, 0.008, 7.5, 0.035, 0.012, 14, [0.76, 0.72, 0.48]);
+        for (let stripe = 0; stripe < 14; stripe++) mesh.box(side * 7.6, 0.012, 1 + stripe, 0.24, 0.015, 0.06, [0.7, 0.68, 0.48]);
+      }
+      for (const position of [0.4, 5.6, 10.8, 14.7]) {
+        mesh.box(0, 7.14, position, 16.0, 0.56, 0.38, [0.26, 0.32, 0.27]);
+        for (const side of [-1, 1]) {
+          mesh.box(side * 4.5, 6.97, position + 0.35, 3.0, 0.12, 0.6, metal);
+          mesh.box(side * 4.5, 6.9, position + 0.35, 2.84, 0.028, 0.42, [0.91, 0.9, 0.7], 3);
+        }
+      }
+      for (const x of [-6.5, -6.3, 6.3, 6.5]) mesh.box(x, 7.34, 7.5, 0.08, 0.1, 15, metal);
+      mesh.box(0, 0.59, 0, 15.0, 0.5, 0.48, metal);
+      mesh.box(0, 6.98, 0, 15.0, 0.25, 0.4, metal);
+      mesh.box(-7.43, 3.8, 0, 0.28, 6.6, 0.4, metal);
+      mesh.box(7.43, 3.8, 0, 0.28, 6.6, 0.4, metal);
+      mesh.box(0, 0.86, 0.12, 14.58, 0.035, 0.05, mint, 3);
+      mesh.box(0, 6.82, 0.12, 14.58, 0.025, 0.05, mint, 3);
+      for (let vent = 0; vent < 55; vent++) mesh.box(-6.8 + vent * 0.25, 0.5, 0.26, 0.1, 0.14, 0.025, [0.07, 0.1, 0.09]);
+      for (const block of OBSTACLES) {
+        mesh.box(block.x, 0.075, block.z, block.width + 0.08, 0.15, block.depth + 0.08, metal);
+        mesh.box(block.x, block.height / 2, block.z, block.width, block.height, block.depth, [0.42, 0.47, 0.39]);
+        mesh.box(block.x, block.height - 0.04, block.z, block.width + 0.09, 0.13, block.depth + 0.08, [0.59, 0.62, 0.49]);
+        mesh.box(block.x, block.height - 0.21, block.z + block.depth / 2 + 0.006, block.width, 0.035, 0.014, [0.72, 0.66, 0.4]);
+        for (const sign of [-1, 1]) mesh.box(block.x + sign * (block.width / 2 - 0.1), 0.28, block.z + block.depth / 2 + 0.01, 0.045, 0.32, 0.018, trim);
+      }
+      for (const position of [3.0, 12.5]) {
+        for (const side of [-1, 1]) mesh.box(side * 5.55, 0.012, position, 2.2, 0.018, 0.035, [0.72, 0.7, 0.49]);
+      }
+      mesh.box(0, 1.48, 15.005, 2.25, 2.96, 0.06, metal);
+      mesh.box(0, 1.4, 14.96, 1.96, 2.75, 0.06, [0.33, 0.4, 0.34]);
+      mesh.box(0, 2.06, 14.91, 0.72, 0.48, 0.04, [0.12, 0.19, 0.16]);
+      mesh.box(0.72, 1.12, 14.85, 0.07, 0.27, 0.13, [0.66, 0.7, 0.57]);
+      mesh.box(0, 3.26, 14.94, 1.1, 0.23, 0.09, [0.51, 0.71, 0.51], 3);
+      for (const side of [-1, 1]) {
+        mesh.box(side * 5.1, 0.41, 14.4, 3.9, 0.18, 0.8, [0.34, 0.35, 0.26]);
+        for (const end of [-1, 1]) mesh.box(side * 5.1 + end * 1.5, 0.2, 14.4, 0.1, 0.4, 0.6, metal);
+        for (let panel = 0; panel < 16; panel++) mesh.box(side * 4.7 + (panel - 8) * 0.23, 3.6, 14.98, 0.09, 2.0, 0.08, [0.27, 0.33, 0.27]);
+      }
+      for (let rack = 0; rack < 3; rack++) {
+        mesh.box(-7.57, 0.5, 13 + rack * 0.43, 0.48, 0.8, 0.38, [0.22, 0.31, 0.28]);
+        mesh.box(-7.32, 0.7, 13 + rack * 0.43, 0.025, 0.028, 0.12, mint, 3);
+      }
+      const random = new SeededRandom(29);
+      for (let cable = 0; cable < 2; cable++) {
+        let previous = [-7.1 + cable * 0.1, 0.025, 0.3];
+        for (let segment = 1; segment < 50; segment++) {
+          const next = [-7.1 + Math.sin(segment * 0.24) * 0.21 + cable * 0.1, 0.026, 0.3 + segment * 0.25];
+          const length = Math.hypot(next[0] - previous[0], next[2] - previous[2]);
+          mesh.box((previous[0] + next[0]) / 2, 0.027, (previous[2] + next[2]) / 2, 0.022, 0.025, length, [0.1, 0.14, 0.12], 0, Math.atan2(next[0] - previous[0], next[2] - previous[2]));
+          previous = next;
+        }
+      }
+      for (let bolt = 0; bolt < 45; bolt++) {
+        const position = random.range(0.5, 14.5);
+        mesh.box(random.next() > 0.5 ? 7.978 : -7.978, random.range(0.5, 3.1), position, 0.026, 0.03, 0.03, metal);
+      }
+      return mesh;
+    }
+
+    buildGun() {
+      const mesh = new Geometry();
+      const body = [0.71, 0.73, 0.62], dark = [0.15, 0.19, 0.18], grip = [0.23, 0.26, 0.24];
+      mesh.bevelBox(0, 0, -0.15, 0.17, 0.16, 0.5, 0.023, body);
+      mesh.box(0, 0.087, -0.16, 0.14, 0.024, 0.44, [0.56, 0.61, 0.53]);
+      mesh.box(0, -0.084, -0.13, 0.125, 0.022, 0.39, dark);
+      mesh.bevelBox(0, 0.0, -0.425, 0.123, 0.117, 0.065, 0.018, dark);
+      mesh.box(0, 0.014, -0.462, 0.057, 0.044, 0.015, [0.07, 0.09, 0.08]);
+      mesh.box(0, 0.105, -0.38, 0.025, 0.025, 0.048, dark);
+      mesh.box(0, 0.115, -0.39, 0.009, 0.009, 0.02, [0.72, 0.93, 0.67], 3);
+      for (const side of [-1, 1]) {
+        mesh.box(side * 0.052, 0.104, 0.018, 0.025, 0.038, 0.058, dark);
+        mesh.box(side * 0.052, 0.126, 0.028, 0.01, 0.006, 0.01, [0.74, 0.9, 0.7], 3);
+        for (let rib = 0; rib < 5; rib++) mesh.box(side * 0.087, 0.005, -0.01 - rib * 0.025, 0.004, 0.103, 0.007, grip);
+        mesh.box(side * 0.087, 0.007, -0.28, 0.005, 0.025, 0.08, [0.27, 0.56, 0.46], 3);
+      }
+      mesh.bevelBox(0, -0.19, 0.04, 0.135, 0.26, 0.14, 0.018, grip);
+      for (let rib = 0; rib < 7; rib++) mesh.box(0, -0.11 - rib * 0.027, 0.114, 0.14, 0.009, 0.005, dark);
+      mesh.box(0, -0.177, -0.13, 0.036, 0.028, 0.19, dark);
+      mesh.box(0, -0.124, -0.224, 0.036, 0.135, 0.022, dark);
+      mesh.box(0, -0.117, -0.075, 0.022, 0.065, 0.026, [0.42, 0.46, 0.4]);
+      mesh.box(0, -0.056, -0.27, 0.19, 0.03, 0.048, [0.72, 0.38, 0.22]);
+      mesh.box(0.018, -0.205, 0.12, 0.195, 0.12, 0.14, [0.27, 0.31, 0.27]);
+      mesh.bevelBox(0.043, -0.31, 0.19, 0.17, 0.17, 0.19, 0.025, [0.31, 0.37, 0.31]);
+      mesh.bevelBox(0.06, -0.4, 0.27, 0.22, 0.18, 0.2, 0.03, [0.38, 0.43, 0.35]);
+      mesh.box(-0.074, -0.106, -0.045, 0.064, 0.064, 0.18, [0.32, 0.36, 0.3]);
+      return mesh;
+    }
+
+    buildMagazine() {
+      const mesh = new Geometry(); mesh.box(0, -0.31, 0.039, 0.14, 0.08, 0.16, [0.16, 0.22, 0.19]);
+      mesh.box(0, -0.356, 0.039, 0.156, 0.024, 0.174, [0.53, 0.57, 0.45]); return mesh;
+    }
+
+    buildDecals() {
+      const entries = [];
+      const create = (text, width, height, geometry, fontSize, color) => {
+        const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+        const context = canvas.getContext('2d'); context.clearRect(0, 0, width, height);
+        context.fillStyle = color; context.font = `600 ${fontSize}px "Helvetica Neue", sans-serif`; context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(text, width / 2, height / 2);
+        entries.push({ mesh: this.upload(geometry), texture: this.createTexture(canvas) });
+      };
+      for (const block of OBSTACLES) {
+        const geometry = new Geometry(); const width = 0.45; const baseY = block.height / 2;
+        geometry.quad([[block.x - width / 2, baseY - 0.19, block.z + block.depth / 2 + 0.015], [block.x + width / 2, baseY - 0.19, block.z + block.depth / 2 + 0.015], [block.x + width / 2, baseY + 0.19, block.z + block.depth / 2 + 0.015], [block.x - width / 2, baseY + 0.19, block.z + block.depth / 2 + 0.015]], [0, 0, 1], [1, 1, 1], 3, [[0, 1], [1, 1], [1, 0], [0, 0]]);
+        create(block.label, 128, 96, geometry, 70, '#c5c4a3');
+      }
+      const floor = new Geometry();
+      floor.quad([[-1.7, 0.015, 13.45], [1.7, 0.015, 13.45], [1.7, 0.015, 12.35], [-1.7, 0.015, 12.35]], [0, 1, 0], [1, 1, 1], 3, [[0, 1], [1, 1], [1, 0], [0, 0]]);
+      create('A / 01', 640, 160, floor, 140, '#9da18965');
+      const back = new Geometry();
+      back.quad([[4.4, 4.6, 14.97], [1.6, 4.6, 14.97], [1.6, 5.8, 14.97], [4.4, 5.8, 14.97]], [0, 0, -1], [1, 1, 1], 3, [[0, 1], [1, 1], [1, 0], [0, 0]]);
+      create('A—01', 640, 256, back, 200, '#b8baa177');
+      return entries;
+    }
+
+    resize() {
+      const width = this.canvas.clientWidth || innerWidth;
+      const height = this.canvas.clientHeight || innerHeight;
+      this.pixelRatio = this.quality === 'low' ? 1 : Math.min(devicePixelRatio || 1, 1.6);
+      this.canvas.width = Math.round(width * this.pixelRatio); this.canvas.height = Math.round(height * this.pixelRatio);
+      this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+      this.aspect = width / height;
+    }
+
+    aim(normalX = 0, normalY = 0) {
+      const { forward, right, up } = cameraBasis(this.yaw, this.pitch);
+      const tangent = Math.tan(this.fov / 2);
+      const direction = forward.map((value, index) => value + right[index] * normalX * tangent * this.aspect + up[index] * normalY * tangent);
+      if (direction[2] >= -0.0001) return null;
+      const distance = (SCREEN.z - this.eye[2]) / direction[2];
+      if (distance <= 0) return null;
+      const hit = [this.eye[0] + direction[0] * distance, this.eye[1] + direction[1] * distance, SCREEN.z];
+      const horizontal = (hit[0] - SCREEN.x) / SCREEN.width;
+      const vertical = 1 - (hit[1] - SCREEN.bottom) / SCREEN.height;
+      const target = this.display.target(horizontal, vertical);
+      return target ? { ...target, hit } : null;
+    }
+
+    render(state) {
+      const gl = this.gl;
+      this.eye = state.eye; this.yaw = state.yaw; this.pitch = state.pitch; this.fov = state.fov;
+      gl.useProgram(this.program); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      const projection = perspective(this.fov, this.aspect, 0.05, 70);
+      const view = viewMatrix(this.eye, this.yaw, this.pitch);
+      gl.uniformMatrix4fv(this.uniforms.uProjection, false, projection); gl.uniformMatrix4fv(this.uniforms.uView, false, view);
+      gl.uniform3fv(this.uniforms.uEye, this.eye); gl.uniform1f(this.uniforms.uTime, state.time); gl.uniform1i(this.uniforms.uTexture, 0);
+      gl.disable(gl.BLEND); gl.depthMask(true);
+      this.draw(this.world); this.draw(this.screen, identity(), { texture: this.screenTexture });
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      for (const decal of this.decals) this.draw(decal.mesh, identity(), { texture: decal.texture, decal: true });
+      if (state.model) {
+        gl.depthMask(false);
+        for (const shot of state.model.visibleTo('player').incoming) {
+          const progress = clamp((state.time - shot.born) / 0.52, 0, 1);
+          const pulse = 0.58 + Math.sin(state.time * 36) * 0.25;
+          this.draw(this.ring, transform([shot.x, 0.035, shot.z], [1.36, 1, 1.36]), { opacity: pulse });
+          this.draw(this.ring, transform([shot.x, 0.036, shot.z], [(1 - progress) * 2.1 + 0.1, 1, (1 - progress) * 2.1 + 0.1]), { opacity: 0.8 });
+          this.draw(this.beam, transform([shot.x, 0, shot.z], [0.5, 1.8, 0.5]), { opacity: 0.3 + progress * 0.5 });
+        }
+        for (const impact of state.model.impacts.filter(impact => impact.owner === 'enemy')) {
+          const age = state.time - impact.born;
+          this.draw(this.ring, transform([impact.x, 0.024, impact.z], [0.6 + age * 2.2, 1, 0.6 + age * 2.2]), { opacity: Math.max(0, 0.8 - age * 0.6) });
+          if (age < 0.22) this.draw(this.beam, transform([impact.x, 0, impact.z], [4 * (1 - age / 0.22), 2, 4 * (1 - age / 0.22)]), { opacity: (1 - age / 0.22) * 0.8 });
+        }
+        for (const decoy of state.model.decoys.filter(decoy => decoy.owner === 'player')) {
+          this.draw(this.ring, transform([decoy.x, 0.024, decoy.z], [0.22, 1, 0.22]), { opacity: 0.4, tint: [0.4, 1.5, 1.4] });
+        }
+        gl.depthMask(true);
+      }
+      if (state.weapon) {
+        gl.clear(gl.DEPTH_BUFFER_BIT);
+        gl.uniformMatrix4fv(this.uniforms.uView, false, identity());
+        gl.uniformMatrix4fv(this.uniforms.uProjection, false, perspective(58 * Math.PI / 180, this.aspect, 0.035, 8));
+        gl.uniform3fv(this.uniforms.uEye, [0, 0, 0]);
+        const aim = state.zoom || 0;
+        const recoil = state.recoil || 0;
+        const reload = state.reload || 0;
+        const bob = state.bob || 0;
+        const hand = transform([0.285 * (1 - aim) + Math.sin(bob) * 0.006, -0.265 + aim * 0.125 - Math.sin(reload * Math.PI) * 0.14 + Math.abs(Math.cos(bob)) * 0.004, -0.64 + recoil * 0.065 + aim * 0.035], [0.76, 0.76, 0.76], [recoil * 0.23 + Math.sin(reload * Math.PI) * 0.24, 0, Math.sin(reload * Math.PI) * -0.42]);
+        gl.disable(gl.BLEND);
+        this.draw(this.gun, hand);
+        const magazineMove = transform([0, -Math.sin(clamp(reload * 1.3, 0, 1) * Math.PI) * 0.38, 0]);
+        this.draw(this.magazine, multiply(hand, magazineMove));
+        if (recoil > 0.65) {
+          gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+          this.draw(this.flash, multiply(hand, transform([0, 0.0, -0.5], [1.0, 0.5, 1.4], [0, 0, state.time * 110])), { opacity: (recoil - 0.65) * 2.8 });
+        }
+      }
+      gl.disable(gl.BLEND);
+    }
+  }
+
+  root.Blindspot.RoomRenderer = RoomRenderer;
+  root.Blindspot.cameraBasis = cameraBasis;
+  root.Blindspot.SCREEN = SCREEN;
+})(window);
+
+</script>
+  <script>
+(function (root) {
+  'use strict';
+  class Soundscape {
+    constructor() {
+      this.context = null;
+      this.volume = 0.55;
+      this.muted = false;
+      this.running = false;
+    }
+    async start() {
+      if (!this.context) {
+        const AudioContext = root.AudioContext || root.webkitAudioContext;
+        if (!AudioContext) return;
+        this.context = new AudioContext();
+        const context = this.context;
+        this.master = context.createGain(); this.master.gain.value = 0;
+        const compressor = context.createDynamicsCompressor(); compressor.threshold.value = -18; compressor.ratio.value = 5;
+        this.master.connect(compressor); compressor.connect(context.destination);
+        this.noiseBuffer = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
+        const samples = this.noiseBuffer.getChannelData(0);
+        for (let index = 0; index < samples.length; index++) samples[index] = Math.random() * 2 - 1;
+        this.ambience = context.createGain(); this.ambience.gain.value = 0.035; this.ambience.connect(this.master);
+        for (const frequency of [48, 72, 120.4]) {
+          const oscillator = context.createOscillator(); oscillator.frequency.value = frequency;
+          const gain = context.createGain(); gain.gain.value = frequency === 48 ? 0.48 : 0.16;
+          oscillator.connect(gain); gain.connect(this.ambience); oscillator.start();
+        }
+        const air = context.createBufferSource(); air.buffer = this.noiseBuffer; air.loop = true;
+        const filter = context.createBiquadFilter(); filter.type = 'lowpass'; filter.frequency.value = 180;
+        const airGain = context.createGain(); airGain.gain.value = 0.24;
+        air.connect(filter); filter.connect(airGain); airGain.connect(this.ambience); air.start();
+      }
+      if (this.context.state === 'suspended') await this.context.resume();
+      this.running = true; this.applyVolume();
+    }
+    applyVolume() {
+      if (!this.context) return;
+      this.master.gain.setTargetAtTime(this.muted || !this.running ? 0 : this.volume * 0.64, this.context.currentTime, 0.07);
+    }
+    pause() { this.running = false; this.applyVolume(); }
+    setVolume(volume) { this.volume = volume; this.applyVolume(); }
+    setMuted(muted) { this.muted = muted; this.applyVolume(); }
+    tone(frequency, duration, gain = 0.1, type = 'sine', endFrequency = frequency, pan = 0, delay = 0) {
+      if (!this.context || !this.running || this.muted) return;
+      const context = this.context; const now = context.currentTime + delay;
+      const oscillator = context.createOscillator(); const envelope = context.createGain();
+      oscillator.type = type; oscillator.frequency.setValueAtTime(frequency, now); oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endFrequency), now + duration);
+      envelope.gain.setValueAtTime(0.001, now); envelope.gain.exponentialRampToValueAtTime(Math.max(0.002, gain), now + 0.006); envelope.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      oscillator.connect(envelope); this.route(envelope, pan); oscillator.start(now); oscillator.stop(now + duration + 0.02);
+    }
+    route(source, pan) {
+      if (this.context.createStereoPanner) {
+        const panner = this.context.createStereoPanner(); panner.pan.value = Math.max(-1, Math.min(1, pan)); source.connect(panner); panner.connect(this.master);
+      } else source.connect(this.master);
+    }
+    noise(duration, gain, frequency = 1000, pan = 0, type = 'lowpass', delay = 0) {
+      if (!this.context || !this.running || this.muted) return;
+      const context = this.context; const now = context.currentTime + delay;
+      const noise = context.createBufferSource(); noise.buffer = this.noiseBuffer;
+      const filter = context.createBiquadFilter(); filter.type = type; filter.frequency.value = frequency;
+      const envelope = context.createGain(); envelope.gain.setValueAtTime(0.001, now); envelope.gain.exponentialRampToValueAtTime(Math.max(0.002, gain), now + 0.004); envelope.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      noise.connect(filter); filter.connect(envelope); this.route(envelope, pan); noise.start(now, Math.random() * 0.7); noise.stop(now + duration + 0.02);
+    }
+    fire() { this.noise(0.16, 0.45, 3100); this.tone(140, 0.24, 0.55, 'sine', 43); this.tone(980, 0.1, 0.09, 'triangle', 150); this.noise(0.34, 0.05, 640, -0.5, 'lowpass', 0.1); }
+    step(quiet, sprint) { this.noise(0.11, quiet ? 0.035 : sprint ? 0.12 : 0.085, 560); this.tone(95, 0.09, quiet ? 0.016 : 0.06, 'sine', 48); }
+    remoteStep(pan, strength) { this.noise(0.14, 0.07 * strength, 330, pan); this.tone(80, 0.1, 0.025 * strength, 'sine', 42, pan); }
+    warning(pan) { this.tone(430, 0.24, 0.1, 'triangle', 790, pan); this.noise(0.28, 0.06, 1600, pan); }
+    impact(damage, pan) { this.noise(0.26, damage ? 0.33 : 0.12, damage ? 760 : 350, pan); this.tone(75, 0.34, damage ? 0.46 : 0.18, 'sine', 30, pan); }
+    hit() { this.tone(860, 0.07, 0.12, 'sine', 760); this.tone(1290, 0.15, 0.1, 'sine', 1190, 0, 0.06); }
+    scan() { this.tone(240, 0.55, 0.1, 'sine', 1040); this.tone(1200, 0.4, 0.07, 'sine', 920, 0, 0.23); }
+    contact() { this.tone(620, 0.09, 0.055, 'sine', 790); }
+    decoy() { this.tone(340, 0.14, 0.08, 'triangle', 220); this.tone(420, 0.16, 0.07, 'sine', 240, 0, 0.14); }
+    reload() { this.noise(0.07, 0.14, 2400); this.noise(0.08, 0.12, 1800, 0, 'highpass', 0.53); this.noise(0.11, 0.19, 2200, 0, 'highpass', 1.27); this.tone(260, 0.12, 0.08, 'triangle', 120, 0, 1.3); }
+    empty() { this.noise(0.045, 0.1, 2100, 0, 'highpass'); }
+    click() { this.tone(650, 0.06, 0.065, 'sine', 570); }
+    finish(won) { const notes = won ? [330, 440, 554, 660] : [330, 294, 220]; notes.forEach((note, index) => this.tone(note, 0.8, 0.11, 'sine', note * 0.996, 0, index * 0.16)); }
+  }
+  root.Blindspot.Soundscape = Soundscape;
+})(window);
+
+</script>
+  <script>
+(function () {
+  'use strict';
+  const { Duel, RoomRenderer, TacticalDisplay, Soundscape, OBSTACLES, clamp, pointInObstacle } = window.Blindspot;
+  const elements = Object.fromEntries(Array.from(document.querySelectorAll('[id]')).map(element => [element.id, element]));
+  const storage = {
+    read(key, fallback) { try { const value = localStorage.getItem(key); return value ? { ...fallback, ...JSON.parse(value) } : fallback; } catch { return fallback; } },
+    write(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} }
+  };
+  const preferences = storage.read('blindspot.preferences.v1', { difficulty: 'standard', sensitivity: 1, volume: 0.55, muted: false, inputMode: 'locked', quality: 'high', reduceMotion: matchMedia('(prefers-reduced-motion: reduce)').matches });
+  const record = storage.read('blindspot.record.v1', { played: 0, wins: 0, bestAccuracy: 0 });
+  const sound = new Soundscape();
+  const display = new TacticalDisplay();
+  let renderer;
+  try { renderer = new RoomRenderer(elements.world, display); }
+  catch (error) {
+    console.error('Blindspot renderer initialization failed:', error);
+    elements['error-modal'].classList.remove('hidden');
+    elements['retry-button'].addEventListener('click', () => location.reload());
+    elements['start-button'].disabled = true;
+    return;
+  }
+
+  let state = 'menu';
+  let duel = null;
+  let yaw = 0;
+  let pitch = 0.168;
+  let recoil = 0;
+  let damageFlash = 0;
+  let hitFlash = 0;
+  let scanFlash = 0;
+  let shake = 0;
+  let zoom = 0;
+  let bob = 0;
+  let trigger = false;
+  let rightDown = false;
+  let pointerFallback = false;
+  let wasLocked = false;
+  let requestLockPending = false;
+  let pointer = { x: innerWidth / 2, y: innerHeight / 2 };
+  let aimTarget = null;
+  let scanArmed = false;
+  let toastUntil = 0;
+  let menuTime = 0;
+  let lastTime = performance.now();
+  let lastHud = 0;
+  let lastMap = -1;
+  let settingsFrom = 'menu';
+  let focusBeforeModal = null;
+  let firstHintStage = 0;
+  let movedAfterShot = 0;
+  let lastHeartbeat = 0;
+  let lastCountdown = 31;
+  const keys = new Set();
+  const freePointer = () => preferences.inputMode === 'free' || pointerFallback;
+  const running = () => state === 'playing';
+  const show = id => elements[id].classList.remove('hidden');
+  const hide = id => elements[id].classList.add('hidden');
+  const text = (id, value) => { if (elements[id].textContent !== String(value)) elements[id].textContent = value; };
+  const timeLabel = seconds => `${Math.floor(Math.max(0, seconds) / 60).toString().padStart(2, '0')}:${Math.floor(Math.max(0, seconds) % 60).toString().padStart(2, '0')}`;
+  const modalIds = ['pause-modal', 'settings-modal', 'howto-modal', 'result-modal'];
+
+  for (let index = 0; index < 10; index++) elements['health-segments'].append(document.createElement('i'));
+  for (let index = 0; index < 6; index++) elements['ammo-pips'].append(document.createElement('i'));
+
+  function setState(nextState) {
+    state = nextState;
+    document.body.dataset.state = state;
+    trigger = false; rightDown = false; keys.clear();
+    scanArmed = false; elements['scan-button'].classList.remove('armed');
+    elements.world.dataset.state = state;
+  }
+
+  function hideModals() { modalIds.forEach(hide); }
+  function releasePointer() { if (document.pointerLockElement) document.exitPointerLock(); document.body.classList.remove('pointer-locked'); }
+  function updateInputMode() {
+    document.body.classList.toggle('free-pointer', freePointer() && running());
+    text('look-control', freePointer() ? '右键拖动 转向' : '鼠标 转向');
+    elements['aim-control'].innerHTML = freePointer() ? '<kbd>F</kbd> 精瞄' : '<kbd>右键</kbd> 精瞄';
+  }
+
+  function fallbackPointer() {
+    requestLockPending = false;
+    if (!running()) return;
+    pointerFallback = true;
+    pointer = { x: innerWidth / 2, y: innerHeight / 2 };
+    updateInputMode();
+    notify('已启用触控板模式：鼠标瞄准 · 右键拖动转向 · F 精瞄', 6);
+  }
+
+  function capturePointer() {
+    updateInputMode();
+    if (freePointer()) return;
+    if (!elements.world.requestPointerLock) { fallbackPointer(); return; }
+    requestLockPending = true;
+    try {
+      const request = elements.world.requestPointerLock();
+      if (request && request.catch) request.catch(fallbackPointer);
+    } catch { fallbackPointer(); }
+  }
+
+  function startRound() {
+    hideModals(); hide('menu'); show('hud');
+    pointerFallback = false;
+    const seed = window.crypto && crypto.getRandomValues ? crypto.getRandomValues(new Uint32Array(1))[0] : Date.now();
+    duel = new Duel({ seed, difficulty: preferences.difficulty });
+    yaw = 0; pitch = 0.168; recoil = 0; zoom = 0; bob = 0; damageFlash = 0; shake = 0; hitFlash = 0; scanFlash = 0;
+    aimTarget = null; firstHintStage = 0; movedAfterShot = 0; lastCountdown = 31;
+    pointer = { x: innerWidth / 2, y: innerHeight / 2 };
+    lastTime = performance.now(); lastMap = -1; toastUntil = 0;
+    text('toast', ''); text('hit-damage', '');
+    elements.toast.classList.remove('visible');
+    document.body.classList.remove('low-health');
+    setState('playing');
+    show('first-hint');
+    applySettings(); updateHud();
+    sound.start().catch(() => {});
+    capturePointer();
+    elements.world.focus({ preventScroll: true });
+  }
+
+  function pauseRound() {
+    if (!running()) return;
+    setState('paused'); releasePointer(); sound.pause();
+    show('pause-modal'); elements['resume-button'].focus();
+  }
+
+  function resumeRound() {
+    hideModals(); setState('playing'); lastTime = performance.now();
+    sound.start().catch(() => {}); capturePointer(); elements.world.focus({ preventScroll: true });
+  }
+
+  function returnToMenu() {
+    setState('menu'); releasePointer(); sound.pause(); hideModals(); hide('hud'); show('menu');
+    duel = null; lastMap = -1;
+    document.body.classList.remove('low-health', 'free-pointer');
+    elements['damage-overlay'].style.opacity = 0; elements['incoming-overlay'].style.opacity = 0; elements['scan-overlay'].style.opacity = 0;
+    elements['start-button'].focus();
+  }
+
+  function openSettings() {
+    focusBeforeModal = document.activeElement;
+    settingsFrom = state;
+    if (running()) { pauseRound(); settingsFrom = 'paused'; }
+    hide('pause-modal'); show('settings-modal'); elements.difficulty.focus();
+  }
+
+  function closeSettings() {
+    hide('settings-modal'); storage.write('blindspot.preferences.v1', preferences);
+    if (settingsFrom === 'paused') { show('pause-modal'); elements['resume-button'].focus(); }
+    else if (focusBeforeModal && focusBeforeModal.focus) focusBeforeModal.focus();
+  }
+
+  function showHowto() { focusBeforeModal = document.activeElement; show('howto-modal'); elements['howto-play'].focus(); }
+  function hideHowto() { hide('howto-modal'); if (focusBeforeModal) focusBeforeModal.focus(); }
+
+  function applySettings() {
+    preferences.sensitivity = clamp(Number(preferences.sensitivity) || 1, 0.4, 2);
+    preferences.volume = clamp(Number(preferences.volume) || 0, 0, 1);
+    sound.setVolume(preferences.volume); sound.setMuted(preferences.muted);
+    elements['sound-toggle'].classList.toggle('muted', preferences.muted);
+    elements['sound-toggle'].setAttribute('aria-pressed', String(preferences.muted));
+    elements['sound-toggle'].setAttribute('aria-label', preferences.muted ? '打开声音' : '关闭声音');
+    elements['sound-toggle'].title = preferences.muted ? '打开声音（M）' : '静音（M）';
+    renderer.quality = preferences.quality; renderer.resize();
+    document.body.classList.toggle('reduce-motion', preferences.reduceMotion);
+    elements.difficulty.value = preferences.difficulty;
+    elements.sensitivity.value = preferences.sensitivity;
+    elements.volume.value = preferences.volume;
+    elements['input-mode'].value = preferences.inputMode;
+    elements.quality.value = preferences.quality;
+    elements['reduce-motion'].checked = preferences.reduceMotion;
+    text('sensitivity-value', preferences.sensitivity.toFixed(2)); text('volume-value', `${Math.round(preferences.volume * 100)}%`);
+    updateInputMode();
+  }
+
+  function toggleSound() { preferences.muted = !preferences.muted; applySettings(); storage.write('blindspot.preferences.v1', preferences); }
+  function notify(message, duration = 2.7, danger = false) {
+    text('toast', message); elements.toast.classList.add('visible'); elements.toast.classList.toggle('danger', danger);
+    toastUntil = (duel ? duel.time : menuTime) + duration;
+  }
+
+  function shoot() {
+    if (!running()) return;
+    aimTarget = renderer.aim(freePointer() ? pointer.x / innerWidth * 2 - 1 : 0, freePointer() ? 1 - pointer.y / innerHeight * 2 : 0);
+    if (!aimTarget) { if (duel.player.fireCooldown === 0) { notify('瞄准巨幕中央的地图，子弹才能抵达对面。', 2.1); duel.player.fireCooldown = 0.35; } return; }
+    if (duel.player.reloadTime > 0) return;
+    if (duel.player.ammo === 0) { sound.empty(); duel.reload('player'); return; }
+    if (duel.fire('player', aimTarget)) {
+      if (firstHintStage === 0) { firstHintStage = 1; movedAfterShot = duel.stats.distance; }
+    }
+  }
+
+  function scan() {
+    if (!running()) return;
+    aimTarget = renderer.aim(freePointer() ? pointer.x / innerWidth * 2 - 1 : 0, freePointer() ? 1 - pointer.y / innerHeight * 2 : 0);
+    if (duel.player.scanCooldown > 0) { notify(`侦测器充能中 · ${Math.ceil(duel.player.scanCooldown)} 秒`, 1.5); return; }
+    if (!aimTarget) { notify('先瞄准地图上的一片区域，再按 E 侦测。', 2.2); return; }
+    if (duel.scan('player', aimTarget) && firstHintStage === 2) firstHintStage = 3;
+    scanArmed = false; elements['scan-button'].classList.remove('armed');
+  }
+
+  function selectScan() {
+    if (!running()) return;
+    if (!freePointer()) { scan(); return; }
+    if (duel.player.scanCooldown > 0) { notify(`侦测器充能中 · ${Math.ceil(duel.player.scanCooldown)} 秒`, 1.5); return; }
+    scanArmed = !scanArmed;
+    elements['scan-button'].classList.toggle('armed', scanArmed);
+    notify(scanArmed ? '侦测已选定 · 点击地图投放。再次点击技能可取消。' : '已取消侦测瞄准。', 3);
+    elements.world.focus({ preventScroll: true });
+  }
+
+  function decoy() {
+    if (!running()) return;
+    if (!duel.decoy('player')) notify(`伪声装置充能中 · ${Math.ceil(duel.player.decoyCooldown)} 秒`, 1.5);
+  }
+
+  function stereoPan(x, z) {
+    const deltaX = x - duel.player.x, deltaZ = z - duel.player.z;
+    return clamp((deltaX * Math.cos(yaw) + deltaZ * Math.sin(yaw)) / Math.max(2, Math.hypot(deltaX, deltaZ)), -0.85, 0.85);
+  }
+
+  function processEvents() {
+    for (const event of duel.drainEvents()) {
+      if (event.type === 'fire') {
+        if (event.side === 'player') { recoil = 1; sound.fire(); }
+        else {
+          const distance = Math.hypot(event.target.x - duel.player.x, event.target.z - duel.player.z);
+          if (distance < 4.5) sound.warning(stereoPan(event.target.x, event.target.z));
+        }
+      } else if (event.type === 'impact') {
+        if (event.side === 'player') {
+          if (event.damage) { hitFlash = 1; text('hit-damage', `−${event.damage}`); sound.hit(); notify(event.damage === 34 ? '确认直击 −34 · 他受伤后会加速，别追着旧残影打。' : '擦伤 −18 · 再预判一步。', 2.5); }
+          else if (event.blocked) notify('击中掩体 · 留意障碍之间的通道。', 1.8);
+        } else {
+          const distance = Math.hypot(event.x - duel.player.x, event.z - duel.player.z);
+          if (distance < 5) sound.impact(event.damage, stereoPan(event.x, event.z));
+          if (event.damage) { damageFlash = 1; shake = preferences.reduceMotion ? 0.1 : 1; notify(`受到 ${event.damage} 伤害 · 逃生加速已触发，立刻换位！`, 2.4, true); }
+          else if (distance < 2.7) notify('擦肩而过。别让他猜中第二次。', 1.9);
+        }
+      } else if (event.type === 'step') sound.step(event.quiet, event.sprint);
+      else if (event.type === 'remote-step') sound.remoteStep(event.x / 8, event.strength);
+      else if (event.type === 'reload' && event.side === 'player') sound.reload();
+      else if (event.type === 'scan' && event.side === 'player') { sound.scan(); scanFlash = 1; notify('侦测已投放 · 绿色圆圈内有人，才会显出轨迹。', 2.7); }
+      else if (event.type === 'scan-pulse' && event.side === 'player' && event.occupied) sound.contact();
+      else if (event.type === 'decoy' && event.side === 'player') { sound.decoy(); notify('已留下伪声 · 1.3 秒后发出脚步，现在离开这里。', 3.1); }
+      else if (event.type === 'finish') finishRound();
+    }
+  }
+
+  function finishRound() {
+    setState('result'); releasePointer(); document.body.classList.remove('free-pointer'); hide('warning'); hide('first-hint');
+    const result = duel.result; const won = result.winner === 'player'; const tied = result.winner === 'draw';
+    const accuracy = duel.stats.shots ? Math.round(duel.stats.hits / duel.stats.shots * 100) : 0;
+    record.played++; if (won) record.wins++; record.bestAccuracy = Math.max(record.bestAccuracy, accuracy);
+    storage.write('blindspot.record.v1', record);
+    text('result-title', tied ? '你们，都读懂了沉默。' : won ? '你读懂了他的沉默。' : '他先听见了你。');
+    text('result-description', tied ? '两间房间，一样的心跳。这个梦没有输家。' : won ? '对面的声纹消失了。你的梦，还在继续。' : '房间安静下来。但下一次，你会走得更轻。');
+    text('result-overline', tied ? 'CONNECTION CLOSED / STALEMATE' : won ? 'CONNECTION CLOSED / YOU SURVIVED' : 'CONNECTION CLOSED / SIGNAL LOST');
+    text('result-symbol', tied ? '≋' : won ? '◎' : '◌');
+    elements['result-modal'].querySelector('.result-card').classList.toggle('lost', !won && !tied);
+    text('result-own-hp', duel.player.hp); text('result-enemy-hp', duel.enemy.hp);
+    text('result-reason', result.reason === 'elimination' ? won ? '对手生命归零' : '你的生命归零' : tied ? '120 秒 · 生命持平' : '120 秒 · 生命值判定');
+    text('stat-hits', `${accuracy}%`); text('stat-damage', duel.stats.damage); text('stat-dodges', duel.stats.dodges); text('stat-time', timeLabel(Math.ceil(result.duration)));
+    const advice = duel.stats.shots === 0 ? '下次试试：瞄准屏幕上的光团前方，左键开枪。先大胆猜一次。' : duel.stats.scans === 0 ? '下次试试 E：用侦测排除一片空区。知道他“不在那里”，也是情报。' : duel.stats.distance < 25 ? '下次试试：每次开枪后横移几步。你的枪声暴露的是旧位置。' : accuracy < 20 ? '残影是过去的位置。沿着拖影的方向，提前一点开枪。' : duel.stats.decoys === 0 ? '下次试试 Q：在老位置留下假脚步，把他的判断引向空处。' : '你已经学会用沉默说谎。试试更深一层的梦境。';
+    text('result-tip', advice); text('record-summary', `本地梦境 ${record.played} 局 · 苏醒 ${record.wins} 次 · 最佳命中率 ${record.bestAccuracy}%`);
+    show('result-modal'); elements['replay-button'].focus(); sound.finish(won || tied);
+    updateHud();
+  }
+
+  function drawLocalMap() {
+    const context = elements['local-map'].getContext('2d'); const width = 174, height = 138, left = 13, top = 8;
+    const point = (x, z) => [left + (x + 8) / 16 * width, top + z / 15 * height];
+    context.clearRect(0, 0, 200, 160);
+    context.fillStyle = '#12221880'; context.fillRect(left, top, width, height);
+    context.strokeStyle = '#9dbb8155'; context.lineWidth = 1; context.strokeRect(left + 0.5, top + 0.5, width, height);
+    context.fillStyle = '#afc49133';
+    for (const block of OBSTACLES) { const position = point(block.x - block.width / 2, block.z - block.depth / 2); context.fillRect(position[0], position[1], block.width / 16 * width, block.depth / 15 * height); }
+    context.fillStyle = '#cbdbad'; context.fillRect(left + 17, top, width - 34, 2);
+    const center = point(duel.player.x, duel.player.z);
+    context.save(); context.translate(center[0], center[1]); context.rotate(yaw);
+    context.fillStyle = '#c9ddb927'; context.beginPath(); context.moveTo(0, 0); context.arc(0, 0, 28, -Math.PI / 2 - 0.57, -Math.PI / 2 + 0.57); context.closePath(); context.fill();
+    context.fillStyle = duel.player.audibleTime > 0 ? '#e9bc8d' : '#d8e8bd'; context.beginPath(); context.moveTo(0, -5); context.lineTo(3.6, 4); context.lineTo(0, 2); context.lineTo(-3.6, 4); context.closePath(); context.fill();
+    context.restore();
+    for (const incoming of duel.visibleTo('player').incoming) { const position = point(incoming.x, incoming.z); context.strokeStyle = '#e9a272'; context.beginPath(); context.arc(position[0], position[1], 8, 0, Math.PI * 2); context.stroke(); }
+  }
+
+  function updateHud() {
+    if (!duel) return;
+    const player = duel.player;
+    text('clock', timeLabel(Math.ceil(duel.remaining))); text('player-hp', player.hp); text('enemy-hp', duel.enemy.hp);
+    elements['own-top-bar'].style.width = `${player.hp}%`; elements['enemy-top-bar'].style.width = `${duel.enemy.hp}%`;
+    elements.clock.parentElement.classList.toggle('urgent', duel.remaining <= 30);
+    document.body.classList.toggle('low-health', player.hp <= 34);
+    Array.from(elements['health-segments'].children).forEach((segment, index) => segment.classList.toggle('empty', index >= Math.ceil(player.hp / 10)));
+    text('ammo-value', String(player.ammo).padStart(2, '0'));
+    Array.from(elements['ammo-pips'].children).forEach((segment, index) => segment.classList.toggle('empty', index >= player.ammo));
+    elements['reload-label'].innerHTML = player.reloadTime > 0 ? `<span>${player.reloadTime.toFixed(1)}s</span> 装填中` : '<kbd>R</kbd> 换弹';
+    const loud = player.audibleTime > 0;
+    elements.exposure.classList.toggle('loud', loud);
+    text('exposure-label', loud ? '已留下声纹' : player.quiet && player.moving ? '静步 · 隐匿中' : player.moving ? '走动中' : '保持安静');
+    text('exposure-level', loud ? 'SIGNAL EXPOSED' : 'LOW SIGNAL');
+    elements['boost-label'].classList.toggle('hidden', player.boost <= 0);
+    text('scan-status', player.scanCooldown > 0 ? `${Math.ceil(player.scanCooldown)}s · 充能中` : '就绪 · 瞄准地图释放');
+    text('decoy-status', player.decoyCooldown > 0 ? `${Math.ceil(player.decoyCooldown)}s · 充能中` : '就绪 · 原地留下诱饵');
+    elements['scan-button'].classList.toggle('cooling', player.scanCooldown > 0); elements['decoy-button'].classList.toggle('cooling', player.decoyCooldown > 0);
+    elements['scan-button'].setAttribute('aria-disabled', String(player.scanCooldown > 0)); elements['decoy-button'].setAttribute('aria-disabled', String(player.decoyCooldown > 0));
+    elements['scan-cooldown'].style.width = `${(1 - player.scanCooldown / 14) * 100}%`; elements['decoy-cooldown'].style.width = `${(1 - player.decoyCooldown / 20) * 100}%`;
+    const hasSignal = duel.visibleTo('player').traces.some(trace => duel.time - trace.born < trace.life * 0.75);
+    text('field-note', hasSignal ? '捕获到对方声纹' : '安静也是一种信号');
+    text('match-phase', duel.remaining <= 30 ? '梦境即将结束' : hasSignal ? '声纹已捕获' : '寻找声源');
+    text('coordinates', `X ${player.x.toFixed(1)} · Z ${player.z.toFixed(1)}`);
+    elements['match-objective'].style.opacity = duel.time < 12 ? '0.8' : '0.3';
+    const toastShowing = duel.time < toastUntil;
+    elements.toast.classList.toggle('visible', toastShowing);
+    if (firstHintStage === 1 && duel.stats.distance - movedAfterShot > 2.5) firstHintStage = 2;
+    if (firstHintStage >= 3 || duel.time > (record.played ? 13 : 34) || toastShowing || !running()) hide('first-hint');
+    else {
+      show('first-hint');
+      const hint = firstHintStage === 0 ? ['01 / 03', '找到巨幕上的<span>模糊残影</span>，左键开枪。', freePointer() ? 'WASD 移动 · 右键拖动转向 · F 精瞄' : 'WASD 移动 · 鼠标转向 · 右键精瞄'] : firstHintStage === 1 ? ['02 / 03', '枪声暴露了你。<span>现在，换一个位置。</span>', 'WASD 移动 · Shift 疾跑 · C 静步'] : ['03 / 03', '瞄准一片区域，按 <span>E</span> 释放侦测。', '绿色波纹只揭示范围内的轨迹 · 不显示敌人'];
+      elements['first-hint'].querySelector('.hint-step').textContent = hint[0];
+      elements['first-hint'].querySelector('p').innerHTML = hint[1];
+      elements['first-hint'].querySelector('small').textContent = hint[2];
+    }
+    drawLocalMap();
+    elements.world.dataset.time = duel.time.toFixed(2);
+    elements.world.dataset.health = String(player.hp);
+    elements.world.dataset.enemyHealth = String(duel.enemy.hp);
+    elements.world.dataset.ammo = String(player.ammo);
+  }
+
+  function updateWarning() {
+    const incoming = duel.visibleTo('player').incoming;
+    const danger = incoming.find(shot => Math.hypot(shot.x - duel.player.x, shot.z - duel.player.z) < 4);
+    elements.warning.classList.toggle('hidden', !danger || !running());
+    elements['incoming-overlay'].style.opacity = danger && running() ? 0.5 + Math.sin(duel.time * 40) * 0.2 : 0;
+    if (danger) {
+      const directionX = danger.x - duel.player.x, directionZ = danger.z - duel.player.z;
+      const lateral = directionX * Math.cos(yaw) + directionZ * Math.sin(yaw);
+      const forward = directionX * Math.sin(yaw) - directionZ * Math.cos(yaw);
+      text('warning-direction', Math.abs(lateral) > Math.abs(forward) ? lateral > 0 ? '→' : '←' : forward > 0 ? '↑' : '↓');
+    }
+  }
+
+  function tick(now) {
+    const delta = Math.min(0.1, Math.max(0.0001, (now - lastTime) / 1000)); lastTime = now;
+    if (state === 'menu') menuTime += delta;
+    if (running()) {
+      if (keys.has('ArrowLeft')) yaw -= delta * 1.15;
+      if (keys.has('ArrowRight')) yaw += delta * 1.15;
+      if (keys.has('ArrowUp')) pitch = clamp(pitch + delta * 0.9, -1.05, 1.12);
+      if (keys.has('ArrowDown')) pitch = clamp(pitch - delta * 0.9, -1.05, 1.12);
+      const horizontal = Number(keys.has('KeyD')) - Number(keys.has('KeyA'));
+      const forward = Number(keys.has('KeyW')) - Number(keys.has('KeyS'));
+      duel.step(delta, { x: horizontal * Math.cos(yaw) + forward * Math.sin(yaw), z: horizontal * Math.sin(yaw) - forward * Math.cos(yaw), sprint: keys.has('ShiftLeft') || keys.has('ShiftRight'), quiet: keys.has('KeyC') });
+      if (trigger && duel.player.fireCooldown <= 0) shoot();
+      processEvents();
+      if (duel.player.moving) bob += delta * (duel.player.sprint ? 13 : 8.5);
+      const currentSecond = Math.ceil(duel.remaining);
+      if (currentSecond <= 30 && currentSecond !== lastCountdown) {
+        if (currentSecond === 30) notify('剩余 30 秒。时间结束时，生命更多的一方获胜。', 3.8);
+        if (currentSecond <= 10 && currentSecond > 0) sound.tone(440, 0.065, 0.04, 'sine', 420);
+        lastCountdown = currentSecond;
+      }
+      if (duel.player.hp <= 34 && duel.time - lastHeartbeat > 1.1) { sound.tone(52, 0.16, 0.1, 'sine', 38); lastHeartbeat = duel.time; }
+    }
+    const isWorld = state !== 'menu';
+    const sceneTime = isWorld && duel ? duel.time : menuTime;
+    recoil *= Math.exp(-delta * 13); damageFlash *= Math.exp(-delta * 2.1); hitFlash *= Math.exp(-delta * 5); scanFlash *= Math.exp(-delta * 2); shake *= Math.exp(-delta * 12);
+    const desiredZoom = running() && (keys.has('KeyF') || rightDown && !freePointer()) ? 1 : 0;
+    zoom += (desiredZoom - zoom) * (1 - Math.exp(-delta * 13));
+    const sway = preferences.reduceMotion ? 0 : duel && duel.player.moving && running() ? Math.sin(bob * 2) * 0.018 : 0;
+    const scene = isWorld && duel ? {
+      eye: [duel.player.x, (duel.player.quiet ? 1.53 : 1.72) + sway, duel.player.z],
+      yaw: yaw + Math.sin(now * 0.12) * shake * 0.004,
+      pitch: pitch + Math.cos(now * 0.14) * shake * 0.003,
+      fov: (65 - zoom * 20) * Math.PI / 180,
+      weapon: true, model: duel, recoil, zoom,
+      bob: preferences.reduceMotion ? 0 : bob,
+      reload: duel.player.reloadTime > 0 ? 1 - duel.player.reloadTime / 1.55 : 0,
+      time: sceneTime
+    } : {
+      eye: [-3.8 + Math.sin(menuTime * 0.1) * 0.14, 2.15, 13.25], yaw: -0.055 + Math.sin(menuTime * 0.09) * 0.009, pitch: 0.135,
+      fov: 63 * Math.PI / 180, weapon: false, model: null, time: sceneTime
+    };
+    renderer.eye = scene.eye; renderer.yaw = scene.yaw; renderer.pitch = scene.pitch; renderer.fov = scene.fov;
+    if (running()) {
+      const cursorX = freePointer() ? pointer.x / innerWidth * 2 - 1 : 0;
+      const cursorY = freePointer() ? 1 - pointer.y / innerHeight * 2 : 0;
+      aimTarget = renderer.aim(cursorX, cursorY);
+      const crossX = freePointer() ? pointer.x : innerWidth / 2;
+      const crossY = freePointer() ? pointer.y : innerHeight / 2;
+      for (const id of ['crosshair', 'hit-marker']) { elements[id].style.left = `${crossX}px`; elements[id].style.top = `${crossY}px`; }
+      elements['target-label'].style.left = `${clamp(crossX, 100, innerWidth - 100)}px`; elements['target-label'].style.top = `${crossY + 28}px`;
+      elements.crosshair.classList.toggle('on-target', !!aimTarget);
+      elements.crosshair.classList.toggle('blocked', !!aimTarget && pointInObstacle(aimTarget.x, aimTarget.z));
+      elements['target-label'].classList.toggle('off-map', !aimTarget);
+      if (aimTarget) {
+        const column = ['A', 'B', 'C', 'D'][Math.min(3, Math.floor((aimTarget.x + 8) / 4))];
+        const row = Math.min(3, Math.floor(aimTarget.z / 5) + 1);
+        text('target-label', `${column}${row} / ${pointInObstacle(aimTarget.x, aimTarget.z) ? '掩体' : '可投射'}`);
+      } else text('target-label', Math.cos(yaw) < -0.1 ? '巨幕在身后 · 转身寻找声纹' : '瞄准巨幕中央的地图');
+      updateWarning();
+    }
+    if (lastMap < 0 || sceneTime - lastMap > (preferences.quality === 'low' ? 1 / 20 : 1 / 30) || sceneTime < lastMap) {
+      display.draw(isWorld ? duel : null, aimTarget, sceneTime, !isWorld);
+      renderer.updateScreen(); lastMap = sceneTime;
+    }
+    renderer.render(scene);
+    elements['damage-overlay'].style.opacity = isWorld ? damageFlash * 0.83 : 0;
+    elements['scan-overlay'].style.opacity = isWorld ? scanFlash * 0.5 : 0;
+    elements['hit-marker'].style.opacity = hitFlash;
+    if (now - lastHud > 90 && isWorld) { updateHud(); lastHud = now; }
+    elements.world.dataset.rendered = 'true';
+    requestAnimationFrame(tick);
+  }
+
+  elements['start-button'].addEventListener('click', startRound);
+  elements['replay-button'].addEventListener('click', startRound);
+  elements['howto-play'].addEventListener('click', startRound);
+  elements['resume-button'].addEventListener('click', resumeRound);
+  elements['pause-open'].addEventListener('click', pauseRound);
+  elements['settings-open'].addEventListener('click', openSettings);
+  elements['pause-settings'].addEventListener('click', openSettings);
+  elements['settings-close'].addEventListener('click', closeSettings);
+  elements['settings-done'].addEventListener('click', closeSettings);
+  elements['sound-toggle'].addEventListener('click', toggleSound);
+  elements['return-menu'].addEventListener('click', returnToMenu);
+  elements['result-menu'].addEventListener('click', returnToMenu);
+  elements['howto-open'].addEventListener('click', showHowto);
+  elements['howto-close'].addEventListener('click', hideHowto);
+  elements['scan-button'].addEventListener('click', selectScan);
+  elements['decoy-button'].addEventListener('click', decoy);
+  elements.brand.addEventListener('click', event => { event.preventDefault(); if (running()) pauseRound(); });
+  elements['retry-button'].addEventListener('click', () => location.reload());
+  elements.difficulty.addEventListener('change', event => { preferences.difficulty = event.target.value; });
+  elements.sensitivity.addEventListener('input', event => { preferences.sensitivity = Number(event.target.value); text('sensitivity-value', preferences.sensitivity.toFixed(2)); });
+  elements.volume.addEventListener('input', event => { preferences.volume = Number(event.target.value); sound.setVolume(preferences.volume); text('volume-value', `${Math.round(preferences.volume * 100)}%`); });
+  elements['input-mode'].addEventListener('change', event => { preferences.inputMode = event.target.value; pointerFallback = false; updateInputMode(); });
+  elements.quality.addEventListener('change', event => { preferences.quality = event.target.value; renderer.quality = preferences.quality; renderer.resize(); });
+  elements['reduce-motion'].addEventListener('change', event => { preferences.reduceMotion = event.target.checked; document.body.classList.toggle('reduce-motion', preferences.reduceMotion); });
+
+  document.addEventListener('pointerlockchange', () => {
+    const locked = document.pointerLockElement === elements.world;
+    document.body.classList.toggle('pointer-locked', locked);
+    if (locked) { wasLocked = true; requestLockPending = false; pointerFallback = false; updateInputMode(); }
+    else if (wasLocked) { wasLocked = false; if (running()) pauseRound(); }
+    else if (requestLockPending) fallbackPointer();
+  });
+  document.addEventListener('pointerlockerror', fallbackPointer);
+  document.addEventListener('mousemove', event => {
+    if (!running()) return;
+    if (document.pointerLockElement === elements.world || freePointer() && rightDown) {
+      const sensitivity = 0.0019 * preferences.sensitivity * (1 - zoom * 0.32);
+      yaw += clamp(event.movementX || 0, -160, 160) * sensitivity;
+      pitch = clamp(pitch - clamp(event.movementY || 0, -160, 160) * sensitivity, -1.05, 1.12);
+    }
+    if (freePointer()) pointer = { x: clamp(event.clientX, 0, innerWidth), y: clamp(event.clientY, 0, innerHeight) };
+  });
+  elements.world.addEventListener('mousedown', event => {
+    if (!running()) return;
+    event.preventDefault();
+    if (event.button === 0) {
+      if (!freePointer() && document.pointerLockElement !== elements.world) { capturePointer(); return; }
+      if (scanArmed) { scan(); return; }
+      trigger = true; shoot();
+    }
+    if (event.button === 2) rightDown = true;
+  });
+  document.addEventListener('mouseup', event => { if (event.button === 0) trigger = false; if (event.button === 2) rightDown = false; });
+  document.addEventListener('contextmenu', event => { if (running()) event.preventDefault(); });
+  document.addEventListener('keydown', event => {
+    const modal = modalIds.map(id => elements[id]).find(element => !element.classList.contains('hidden'));
+    if (event.code === 'Tab' && modal) {
+      const focusable = Array.from(modal.querySelectorAll('button:not(:disabled), select, input'));
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    }
+    if (event.code === 'Escape') {
+      if (!elements['settings-modal'].classList.contains('hidden')) closeSettings();
+      else if (!elements['howto-modal'].classList.contains('hidden')) hideHowto();
+      else if (running()) pauseRound();
+      return;
+    }
+    if (event.code === 'KeyM' && !event.repeat && !['INPUT', 'SELECT'].includes(document.activeElement.tagName)) { toggleSound(); return; }
+    if (!running()) return;
+    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyC', 'KeyE', 'KeyQ', 'KeyR', 'KeyF', 'ShiftLeft', 'ShiftRight', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'Tab'].includes(event.code)) event.preventDefault();
+    keys.add(event.code);
+    if (event.repeat) return;
+    if (event.code === 'KeyE') scan();
+    if (event.code === 'KeyQ') decoy();
+    if (event.code === 'KeyR') duel.reload('player');
+  });
+  document.addEventListener('keyup', event => keys.delete(event.code));
+  window.addEventListener('blur', () => { keys.clear(); trigger = false; rightDown = false; if (running()) pauseRound(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && running()) pauseRound(); });
+  window.addEventListener('resize', () => { renderer.resize(); pointer.x = clamp(pointer.x, 0, innerWidth); pointer.y = clamp(pointer.y, 0, innerHeight); });
+  elements.world.addEventListener('webglcontextlost', event => {
+    event.preventDefault(); if (running()) pauseRound();
+    text('error-message', '浏览器暂时回收了图形资源，对局已暂停。重新连接即可重新进入房间。'); show('error-modal');
+  });
+  elements.world.addEventListener('webglcontextrestored', () => location.reload());
+  window.addEventListener('error', event => {
+    if (!event.message) return;
+    if (running()) pauseRound();
+    text('error-message', '梦境连接意外中断。对局已暂停，请重新连接。'); show('error-modal');
+  });
+
+  applySettings();
+  display.draw(null, null, 0, true); renderer.updateScreen();
+  requestAnimationFrame(tick);
+})();
+
+</script>
+</body>
+</html>
