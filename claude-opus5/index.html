@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>坐标猎场 · COORDINATE HUNT</title>
+<style>
+  :root{
+    --bg:#070b12; --panel:#0b1220cc; --line:#1c2b45; --ink:#cfe6ff; --dim:#7f97b8;
+    --accent:#6fd3ff; --amber:#ffb454; --danger:#ff5a4e;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-user-select:none;user-select:none;}
+  html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
+    font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",-apple-system,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);}
+  #gl3d{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:crosshair;}
+  #hud{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;}
+  .ovl{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;
+    background:radial-gradient(ellipse at 50% 30%, #0d1524cc 0%, #05080eE6 70%);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:10;}
+  .hidden{display:none !important;}
+  .panel{width:min(560px,92vw);padding:38px 44px 30px;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;box-shadow:0 24px 80px #000c, inset 0 1px 0 #ffffff10;text-align:center;}
+  h1.title{font-size:54px;letter-spacing:18px;font-weight:800;color:#eaf6ff;text-indent:18px;
+    text-shadow:0 0 24px #6fd3ff55, 0 2px 0 #000;}
+  .sub{font-size:12px;letter-spacing:6px;color:var(--dim);margin:10px 0 4px;}
+  .sub2{font-size:15px;color:var(--accent);letter-spacing:2px;margin-bottom:26px;}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:12px 0;
+    font-size:14px;color:var(--dim);}
+  .chips{display:flex;gap:8px;}
+  .chip{padding:6px 16px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--dim);
+    cursor:pointer;transition:.15s;background:#0a1424;}
+  .chip:hover{color:var(--ink);border-color:#33507f;}
+  .chip.on{color:#08131f;background:var(--accent);border-color:var(--accent);font-weight:700;}
+  input[type=range]{width:150px;accent-color:var(--accent);}
+  .switch{cursor:pointer;padding:4px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;color:var(--dim);}
+  .switch.on{color:var(--amber);border-color:#77552c;}
+  #btnStart{margin-top:26px;padding:14px 60px;font-size:19px;letter-spacing:8px;text-indent:8px;font-weight:700;
+    color:#08131f;background:linear-gradient(180deg,#9fe4ff,#4db8e8);border:none;border-radius:10px;cursor:pointer;
+    box-shadow:0 6px 30px #6fd3ff44, inset 0 1px 0 #ffffffaa;transition:.15s;}
+  #btnStart:hover{transform:translateY(-2px);box-shadow:0 10px 36px #6fd3ff66;}
+  .tips{margin-top:22px;font-size:12.5px;color:var(--dim);line-height:2;}
+  .tips b{color:var(--ink);font-weight:600;}
+  .foot{margin-top:12px;font-size:11.5px;color:#5d7290;}
+  .big{font-size:88px;font-weight:900;letter-spacing:12px;text-indent:12px;margin:6px 0 4px;}
+  .big.win{color:#9fe4ff;text-shadow:0 0 40px #6fd3ff88;}
+  .big.lose{color:var(--danger);text-shadow:0 0 40px #ff5a4e66;}
+  .big.draw{color:#cfd8e6;}
+  .statgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:18px 0;font-size:13px;}
+  .statgrid div{background:#0a1424cc;border:1px solid var(--line);border-radius:8px;padding:10px 4px;}
+  .statgrid .n{font-size:22px;font-weight:700;color:var(--ink);}
+  .statgrid .l{font-size:11px;color:var(--dim);margin-top:3px;}
+  .btns{display:flex;gap:14px;justify-content:center;margin-top:14px;}
+  .btn2{padding:10px 34px;font-size:15px;letter-spacing:3px;border-radius:9px;cursor:pointer;border:1px solid var(--line);
+    background:#0c1828;color:var(--ink);transition:.15s;}
+  .btn2:hover{border-color:var(--accent);color:var(--accent);}
+  .btn2.primary{background:linear-gradient(180deg,#9fe4ff,#4db8e8);color:#08131f;font-weight:700;border:none;}
+  .tally{font-size:13px;color:var(--dim);margin-top:14px;}
+  .tally b{color:var(--ink);}
+  #verBar{position:absolute;bottom:10px;right:14px;font-size:10px;color:#3d5170;letter-spacing:1px;}
+</style>
+</head>
+<body>
+  <canvas id="gl3d"></canvas>
+  <canvas id="hud"></canvas>
+
+  <!-- 主菜单 -->
+  <div id="menu" class="ovl">
+    <div class="panel">
+      <h1 class="title">坐标猎场</h1>
+      <div class="sub">C O O R D I N A T E &nbsp; H U N T</div>
+      <div class="sub2">—— 隔着一面墙的对决 ——</div>
+      <div class="row"><span>对手强度</span>
+        <div class="chips" id="diffChips">
+          <div class="chip" data-d="easy">侦察兵</div>
+          <div class="chip on" data-d="std">猎手</div>
+          <div class="chip" data-d="hard">幽灵</div>
+        </div>
+      </div>
+      <div class="row"><span>音效</span><div class="switch on" id="sndSwitch">开启</div></div>
+      <div class="row"><span>音量</span><input type="range" id="vol" min="0" max="100" value="80"></div>
+      <div class="row"><span>灵敏度</span><input type="range" id="sens" min="30" max="160" value="100"></div>
+      <button id="btnStart">进 入 对 局</button>
+      <div class="tips">
+        <b>WASD</b> 移动 · <b>鼠标</b> 视角 · <b>左键</b> 朝巨幕开火 · <b>右键</b> 放大巨幕<br>
+        <b>Q</b> 投放侦测器 · <b>Shift</b> 疾跑 · <b>R</b> 换弹 · <b>Esc</b> 暂停
+      </div>
+      <div class="foot">你开枪的地方,会在他那边的屏幕上亮起来。开火之后,记得换位置。</div>
+      <div id="verBar">v 1.0 · 梦境构建 · 全部素材由代码生成</div>
+    </div>
+  </div>
+
+  <!-- 暂停 -->
+  <div id="pause" class="ovl hidden">
+    <div class="panel" style="width:min(400px,90vw)">
+      <h2 style="letter-spacing:8px;font-size:26px;margin-bottom:20px">暂 停</h2>
+      <div class="btns" style="flex-direction:column">
+        <button class="btn2 primary" id="btnResume">继续对局</button>
+        <button class="btn2" id="btnRestart">重开本局</button>
+        <button class="btn2" id="btnQuit">回到主菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 结算 -->
+  <div id="end" class="ovl hidden">
+    <div class="panel" style="width:min(480px,92vw)">
+      <div class="big win" id="endBig">胜 利</div>
+      <div id="endSub" style="font-size:13px;color:var(--dim);letter-spacing:1px"></div>
+      <div class="statgrid" id="endStats"></div>
+      <div class="btns">
+        <button class="btn2 primary" id="btnAgain">再来一局</button>
+        <button class="btn2" id="btnMenu">主菜单</button>
+      </div>
+      <div class="tally" id="endTally"></div>
+    </div>
+  </div>
+
+  <script src="js/00_util.js"></script>
+  <script src="js/01_audio.js"></script>
+  <script src="js/02_tex.js"></script>
+  <script src="js/03_gl.js"></script>
+  <script src="js/04_world.js"></script>
+  <script src="js/05_plan.js"></script>
+  <script src="js/06_fx3d.js"></script>
+  <script src="js/07_ai.js"></script>
+  <script src="js/08_game.js"></script>
+</body>
+</html>
